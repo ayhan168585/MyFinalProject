@@ -15,5 +15,7 @@ namespace Business.Constants
         public static string ProductsListedWithCategory = "İstediğiniz kategorideki ürünler listelendi";
         public static string ProductsListedWithUnitPrice = "İstediğiniz fiyat aralığındaki ürünler listelendi";
         public static string ProductDetailListed = "Detayını istediğiniz ürün";
+        public static string ProductUpdated = "Ürün güncellendi";
+        public static string ProductDeleted = "Ürün silindi";
     }
 }
