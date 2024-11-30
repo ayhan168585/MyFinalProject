@@ -76,6 +76,7 @@ namespace DataAccess.Abstract
 }
 --------------------------
 Core katmanı DataAccess klasörü içinde EntityFramework adında bir klasör oluşturulur ve içine EfEntityRepositoryBase adında class oluşturulur.
+Manage nuget package 'den entityframeworkcore eklenir
 --------------------------
 ﻿using Core.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -140,7 +141,7 @@ namespace Core.DataAccess.EntityFramework
     }
 }
 ----------------------------
-DataAccess katmanında Concrete klasörü içinde EntityFramework adında bir klasör açılır. Bu katmanda Context klasörü ve diğer veri tabanı dosyalarının class ları oluşturulur.
+DataAccess katmanında Concrete klasörü içinde EntityFramework adında bir klasör açılır. Bu katmanda Context klasörü ve diğer veri tabanı dosyalarının class ları oluşturulur. Manage nuget package 'den entityframeworkcore eklenir
 -------------------------
 ﻿using Entities.Concrete;
 using Microsoft.EntityFrameworkCore;
