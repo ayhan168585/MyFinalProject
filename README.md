@@ -8,6 +8,7 @@ Entities katmanında Concrete klasöründe Northwind veritabanı tablolarından 
 Core katmanında Entities,DataAccess ve Business katmanları oluşturulur.
 Core katmanında Entities klasöründe IEntity adında bir interface oluşturulur.(public) ve DTO lar içinde IDto adında bir interface oluşturulur.
 Entities katmanındaki veritabanı classlarına Core katmanında oluşturduğumuz IEntity referans olarak verilir.
+
 ------------------------
 
 ﻿using Core.Entities;
