@@ -4,9 +4,9 @@ PROJE SIRALAMASI
 C# Blank Solution oluşturulur.Projenin uygulama ismi verilir(MyFinalProject)
 Class Library olarak Entities,DataAccess,Business ve tüm projelerde kullanılacak Core katmanı ve sunum katmanı için de WebAPI katmanı oluşturulur
 Entities,DataAccess ve Business katmanlarına Concrete ve Abstract adında iki klasör oluşturulur.
-Entities katmanında Northwind veritabanı tablolarından Product,Category,Order ve Customer tabloları oluşturulur.
+Entities katmanında Concrete klasöründe Northwind veritabanı tablolarından Product,Category,Order ve Customer tabloları oluşturulur. Ayrıca Concrete klasörüne DTO ların classlarının tutulacağı DTOs adında bir klasör oluşturulur.
 Core katmanında Entities,DataAccess ve Business katmanları oluşturulur.
-Core katmanında Entities klasöründe IEntity adında bir interface oluşturulur.(public)
+Core katmanında Entities klasöründe IEntity adında bir interface oluşturulur.(public) ve DTO lar içinde IDto adında bir interface oluşturulur.
 Entities katmanındaki veritabanı classlarına Core katmanında oluşturduğumuz IEntity referans olarak verilir.
 ------------------------
 ﻿using Core.Entities;
