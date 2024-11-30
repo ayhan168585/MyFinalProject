@@ -520,7 +520,7 @@ namespace Core.Utilities.Results
     }
 }
 --------------------------
-Business katmanında AOP ve inection işlemlerini yapmak için DependencyResolvers(Bağımlılık çözümleyiciler) adında bir klasör açılır ve içine Autofac klasörü açarız. ve içine AutofacBusinessModule adında bir class oluşturulur.
+Business katmanında AOP ve inection işlemlerini yapmak için DependencyResolvers(Bağımlılık çözümleyiciler) adında bir klasör açılır ve içine Autofac klasörü açarız. ve içine AutofacBusinessModule adında bir class oluşturulur. Manage nuget package'den Autofac ve Autofac extras dynamic proxy eklenir
 -------------------------
 ﻿using Autofac;
 using Business.Abstract;
