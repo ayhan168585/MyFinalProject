@@ -8,8 +8,10 @@ namespace Business.Constants
 {
     public static class Messages
     {
+        public static string AyrımYeri = "---------------------------------------VERİTABANI";
         public static string ProductAdded = "Ürün eklendi";
         public static string ProductNameInvalid = "Ürün ismi geçersiz";
+        public static string ProductNameMinTwoCharacter = "Ürün ismi en az iki karakter olabilir";
         public static string MaintenanceTime = "Bakım zamanı";
         public static string ProductsListed = "Ürünler listelendi";
         public static string ProductsListedWithCategory = "İstediğiniz kategorideki ürünler listelendi";
@@ -32,5 +34,7 @@ namespace Business.Constants
         public static string OrdersListed = "Siparişler listelendi";
         public static string OrdersDetailListed = "Detayını istediğiniz sipariş";
         public static string OrderUpdated = "Sipariş güncellendi.";
+        public static string AyrımYeri2 = "---------------------------------------VALIDATION";
+        public static string ProductNotEmpty = "Ürün adı boş olamaz";
     }
 }
