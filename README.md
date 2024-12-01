@@ -10,7 +10,6 @@ Core katmanında Entities klasöründe IEntity adında bir interface oluşturulu
 Entities katmanındaki veritabanı classlarına Core katmanında oluşturduğumuz IEntity referans olarak verilir.
 
 ------------------------
-
 ﻿using Core.Entities;
 using System;
 using System.Collections.Generic;
