@@ -672,3 +672,305 @@ namespace WebAPI.Controllers
     }
 }
 -------------------------------
+Şimdi validasyon işlemleri yapalım.Öncelikle Bussiness katmanına manage nuget package ile fluent validation eklenir. Business katmanına ValidationRules adında bir klasör açılır ve içine FluentValidation adında bir klasör daha açılır. Ve içine ProductValidator adında bir class oluşturulur.
+----------------------------
+﻿using Business.Constants;
+using Entities.Concrete;
+using FluentValidation;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Business.ValidationRules.FluentValidation
+{
+    public class ProductValidator : AbstractValidator<Product> 
+    {
+        public ProductValidator()
+        {
+            RuleFor(p => p.ProductName).NotEmpty().WithMessage(Messages.ProductNotEmpty);
+            RuleFor(p => p.ProductName).MinimumLength(2).WithMessage(Messages.ProductNameMinTwoCharacter);
+            RuleFor(p => p.UnitPrice).NotEmpty();
+            RuleFor(p => p.UnitPrice).GreaterThan(0);
+            RuleFor(p => p.UnitPrice).GreaterThanOrEqualTo(10).When(p => p.CategoryId == 1);
+        }
+    }
+}
+------------------------------
+Bu validatoru kullanmak için bir tool oluşturuyoruz.Bu bir cross cutting concerns olayı olduğundan yani programı dikine kesen işlemler(Validation,cashing,Logging,Transaction vb.) olduğundan Core katmanında Cross Cutting Concerns adında bir klasör açılarak içine Validation adında bir klasör açılır ve içine ValidationTool adında bir class oluşturulur.
+----------------------------
+﻿using FluentValidation;
+using Microsoft.Extensions.Options;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.CrossCuttingConcerns.Validation
+{
+    public static class ValidationTool
+    {
+        public static void Validate(IValidator validator,object entity)
+        {
+            var context = new ValidationContext<object>(entity);
+            var result = validator.Validate(context);
+            if (!result.IsValid)
+            {
+                throw new ValidationException(result.Errors);
+            }
+        }
+    }
+}
+---------------------------
+Ancak biz validation işlemini aspect olarak uygulayacağız. Bu sebeple Core katmanında Utilities klasörü içinde Interceptors adında bir klasör oluşturuyoruz.
+Bu klasör içine AspectInterceptorSelector,MethodInterception.MethodInterceptionBaseAttribute adında 3 tane class oluşturuyoruz.
+------------------------------
+﻿using Castle.DynamicProxy;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Utilities.Interceptors
+{
+
+    public class AspectInterceptorSelector : IInterceptorSelector
+    {
+        public IInterceptor[] SelectInterceptors(Type type, MethodInfo method, IInterceptor[] interceptors)
+        {
+            var classAttributes = type.GetCustomAttributes<MethodInterceptionBaseAttribute>
+                (true).ToList();
+            var methodAttributes = type.GetMethod(method.Name)
+                .GetCustomAttributes<MethodInterceptionBaseAttribute>(true);
+            classAttributes.AddRange(methodAttributes);
+
+
+            return classAttributes.OrderBy(x => x.Priority).ToArray();
+        }
+    }
+}
+--------------------------
+﻿using Castle.DynamicProxy;
+
+namespace Core.Utilities.Interceptors
+{
+    public abstract class MethodInterception : MethodInterceptionBaseAttribute
+    {
+        //invocation:business method
+        protected virtual void OnBefore(IInvocation invocation) { }
+        protected virtual void OnAfter(IInvocation invocation) { }
+        protected virtual void OnException(IInvocation invocation, System.Exception e) { }
+        protected virtual void OnSuccess(IInvocation invocation) { }
+        public override void Intercept(IInvocation invocation)
+        {
+            var isSuccess = true;
+            OnBefore(invocation);
+            try
+            {
+                invocation.Proceed();
+            }
+            catch (Exception e)
+            {
+                isSuccess = false;
+                OnException(invocation, e);
+                throw;
+            }
+            finally
+            {
+                if (isSuccess)
+                {
+                    OnSuccess(invocation);
+                }
+            }
+            OnAfter(invocation);
+        }
+    }
+}
+---------------------------
+﻿using Castle.DynamicProxy;
+
+namespace Core.Utilities.Interceptors
+{
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
+    public abstract class MethodInterceptionBaseAttribute : Attribute, IInterceptor
+    {
+        public int Priority { get; set; }   
+
+        public virtual void Intercept(IInvocation invocation)
+        {
+
+        }
+    }
+}
+-----------------------------
+Bunu Aspect olarak kullanacağımız için Core katmanı içinde Aspects adında bir klasör açılır ve içine önce Autofac adında bir klasör ve onun içine de Validation adında bir klasör daha açılır. ve içine ValidationAspect adında bir class açılır.
+-------------------------
+﻿using Castle.DynamicProxy;
+using Core.CrossCuttingConcerns.Validation;
+using Core.Utilities.Interceptors;
+using FluentValidation;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Aspects.Autofac.Validation
+{
+    public class ValidationAspect : MethodInterception
+    {
+        private Type _validatorType;
+        public ValidationAspect(Type validatorType)
+        {
+            if (!typeof(IValidator).IsAssignableFrom(validatorType))
+            {
+                throw new System.Exception("Bu bir doğrulama sınıfı değil");
+            }
+
+            _validatorType = validatorType;
+        }
+        protected override void OnBefore(IInvocation invocation)
+        {
+            var validator = (IValidator)Activator.CreateInstance(_validatorType);
+            var entityType = _validatorType.BaseType.GetGenericArguments()[0];
+            var entities = invocation.Arguments.Where(t => t.GetType() == entityType);
+            foreach (var entity in entities)
+            {
+                ValidationTool.Validate(validator, entity);
+            }
+        }
+    }
+}
+--------------------------
+Ama bunun uygulamaya kullanılacağını belirtmek gerekiyor bunu yapmak için Bussiness katmanında bulunan DependencyResolvers klasörü içindeki Autofac klasörü içindeki AutofacBusinessModule classına bir ekleme yapmak gerekiyor. Bu ekleme ile birlikte class şu şekile dönüşüyor.
+-------------------------
+﻿using Autofac;
+using Autofac.Extras.DynamicProxy;
+using Business.Abstract;
+using Business.Concrete;
+using Castle.DynamicProxy;
+using Core.Utilities.Interceptors;
+using DataAccess.Abstract;
+using DataAccess.Concrete.EntityFramework;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Business.DependencyResolvers.Autofac
+{
+    public class AutofacBusinessModule:Module
+    {
+        protected override void Load(ContainerBuilder builder)
+        {
+            builder.RegisterType<ProductManager>().As<IProductService>().SingleInstance();
+            builder.RegisterType<EfProductDal>().As<IProductDal>().SingleInstance();
+            builder.RegisterType<CategoryManager>().As<ICategoryService>().SingleInstance();
+            builder.RegisterType<EfCategoryDal>().As<ICategoryDal>().SingleInstance();
+            builder.RegisterType<CustomerManager>().As<ICustomerService>().SingleInstance();
+            builder.RegisterType<EfCustomerDal>().As<ICustomerDal>().SingleInstance();
+            builder.RegisterType<OrderManager>().As<IOrderService>().SingleInstance();
+            builder.RegisterType<EfOrderDal>().As<IOrderDal>().SingleInstance();
+
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+
+            builder.RegisterAssemblyTypes(assembly).AsImplementedInterfaces()
+                .EnableInterfaceInterceptors(new ProxyGenerationOptions()
+                {
+                    Selector = new AspectInterceptorSelector()
+                }).SingleInstance();
+
+        }
+    }
+}
+---------------------------
+Böylece Validasyon işlemi Aspect olarak kullanılabilir duruma geliyor. Bunu kullanmak için ProductManager de şu değişiklik yapılır.
+--------------------------
+﻿using Business.Abstract;
+using Business.Constants;
+using Business.ValidationRules.FluentValidation;
+using Core.Aspects.Autofac.Validation;
+using Core.CrossCuttingConcerns.Validation;
+using Core.Utilities.Results;
+using DataAccess.Abstract;
+using Entities.Concrete;
+using Entities.DTOs;
+using FluentValidation;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Business.Concrete
+{
+    public class ProductManager : IProductService
+    {
+        IProductDal _productDal;
+
+        public ProductManager(IProductDal productDal)
+        {
+            _productDal = productDal;
+        }
+
+        [ValidationAspect(typeof(ProductValidator))]
+        public IResult Add(Product product)
+        {
+            _productDal.Add(product);
+            return new SuccessResult(Messages.ProductAdded);
+        }
+        public IResult Update(Product product)
+        {
+            if(product.ProductName.Length < 2)
+            {
+                return new ErrorResult(Messages.ProductNameInvalid);
+            }
+            _productDal.Update(product);
+            return new SuccessResult(Messages.ProductUpdated);
+        }
+
+        public IDataResult<List<Product>> GetAll()
+        {
+            if (DateTime.Now.Hour==22)
+            {
+                return new ErrorDataResult<List<Product>>(Messages.MaintenanceTime);
+            }
+            return new SuccessDataResult<List<Product>>(_productDal.GetAll(),Messages.ProductsListed);
+        }
+
+        public IDataResult<List<Product>> GetAllByCategoryId(int id)
+        {
+            return new SuccessDataResult<List<Product>> (_productDal.GetAll(p=>p.CategoryId==id),Messages.ProductsListedWithCategory);
+        }
+
+        public IDataResult<List<Product>> GetAllByUnitPrice(decimal min, decimal max)
+        {
+            return new SuccessDataResult<List<Product>>(_productDal.GetAll(p=>p.UnitPrice>=min && p.UnitPrice<=max),Messages.ProductsListedWithUnitPrice);
+
+        }
+
+        public IDataResult<Product> GetById(int productId)
+        {
+            return new SuccessDataResult<Product>(_productDal.Get   (p=>p.ProductId==productId),Messages.ProductDetailListed);
+        }
+
+        public IDataResult<List<ProductDetailDto>> GetProductDetails()
+        {
+            return new SuccessDataResult<List<ProductDetailDto>>(_productDal.GetProductDetails(),Messages.ProductsListed);
+        }
+
+        public IResult Delete(Product product)
+        {
+            _productDal.Delete(product);
+            return new SuccessResult(Messages.ProductDeleted);
+        }
+    }
+}
+-------------------------
+Add metodunda hemen üstüne validasyon yapılacağı ve bunun için ProductValidator'un kullanılacağı bildiriliyor.
