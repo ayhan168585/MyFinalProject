@@ -973,3 +973,30 @@ namespace Business.Concrete
 }
 -------------------------
 Add metodunda hemen üstüne validasyon yapılacağı ve bunun için ProductValidator'un kullanılacağı bildiriliyor.
+İş kurallarını çalıştırmak için bir iş motoru yazıyoruz. Her ne kadar bu iş katmanını ilgilendirse de bu tüm diğer projelerde de kullanılacak bir yapı olduğundan bunu Core katmanı altında oluşturuyoruz. Bunun için Core katmanı Utilities klasörü içine Business adında bir klasör oluşturulup içine BusinessRules adında bir class oluşturuyoruz.
+------------------------
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Core.Utilities.Results;
+
+namespace Core.Utilities.Business
+{
+    public class BusinessRules
+    {
+        public static IResult Run(params IResult[] logics)
+        {
+            foreach (var logic in logics)
+            {
+                if (!logic.Success)
+                {
+                    return logic;
+                }
+
+            }
+            return null;
+        }
+    }
+}
+------------------------
+
