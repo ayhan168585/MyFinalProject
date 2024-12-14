@@ -29,6 +29,12 @@ namespace Business.Concrete
         [ValidationAspect(typeof(ProductValidator))]
         public IResult Add(Product product)
         {
+           var Toplam= _productDal.GetAll(p => p.CategoryId == product.CategoryId).Count;
+            if (Toplam >= 5)
+            {
+                return new ErrorResult();
+            }
+           
             _productDal.Add(product);
             return new SuccessResult(Messages.ProductAdded);
         }
