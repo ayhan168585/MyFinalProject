@@ -999,4 +999,4 @@ namespace Core.Utilities.Business
     }
 }
 ------------------------
-
+JWT sistemini kuruyoruz. Bu sistm kullanıcılara yetkilerine göre işlem yapabilme yetkisi ve sisteme giriş yetkisi vermeye yarar.
