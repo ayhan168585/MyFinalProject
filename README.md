@@ -1071,4 +1071,5 @@ WebAPI katmanında appsetting dosyasında TokenOptions adında bir anahtar ekliy
 
   }, 
   Bu TokenOption içinde olmazsa olmaz bazı alanlar vardır ki bu token'in bize ait olduğu anlaşılsın. Bu alanlar Audience,Issuer,AccessTokenExpiration ve SecurityKey alanlarıdr.
-  Audience kısmına sitemizin web adresini yada yukarıda görüldüğü gibi verebiliriz. Issuer alanına da aynı ismi vrebiliriz. AccessTokenExpiration oluşturduğumuz token'in geçerlilik süresini verir karşılığı dakika cinsindendir. SecurityKey alanı ise bu token'i kullanırken kullanacağımız anahtardır.
+  Audience kısmına sitemizin web adresini yada yukarıda görüldüğü gibi verebiliriz. Issuer alanına da aynı ismi vrebiliriz. AccessTokenExpiration oluşturduğumuz token'in geçerlilik süresini verir karşılığı dakika cinsindendir. SecurityKey alanı ise bu token'i kullanırken kullanacağımız anahtardır. Appsettings dosyasındaki bu düzenlemeyi yaptıktan sonra Core katmanındaki Utilities klasörüne Security adında bir klasör açıyoruz. Bu klasörün içindede Hashing,Encyription,JWT adında  tane alt klasör oluşturuyoruz.
+  
