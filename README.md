@@ -1071,5 +1071,201 @@ WebAPI katmanında appsetting dosyasında TokenOptions adında bir anahtar ekliy
 
   }, 
   Bu TokenOption içinde olmazsa olmaz bazı alanlar vardır ki bu token'in bize ait olduğu anlaşılsın. Bu alanlar Audience,Issuer,AccessTokenExpiration ve SecurityKey alanlarıdr.
-  Audience kısmına sitemizin web adresini yada yukarıda görüldüğü gibi verebiliriz. Issuer alanına da aynı ismi vrebiliriz. AccessTokenExpiration oluşturduğumuz token'in geçerlilik süresini verir karşılığı dakika cinsindendir. SecurityKey alanı ise bu token'i kullanırken kullanacağımız anahtardır. Appsettings dosyasındaki bu düzenlemeyi yaptıktan sonra Core katmanındaki Utilities klasörüne Security adında bir klasör açıyoruz. Bu klasörün içindede Hashing,Encyription,JWT adında  tane alt klasör oluşturuyoruz.
+  Audience kısmına sitemizin web adresini yada yukarıda görüldüğü gibi verebiliriz. Issuer alanına da aynı ismi vrebiliriz. AccessTokenExpiration oluşturduğumuz token'in geçerlilik süresini verir karşılığı dakika cinsindendir. SecurityKey alanı ise bu token'i kullanırken kullanacağımız anahtardır. Appsettings dosyasındaki bu düzenlemeyi yaptıktan sonra Core katmanındaki Utilities klasörüne Security adında bir klasör açıyoruz. Bu klasörün içindede Hashing,Encyription,JWT adında  3 tane alt klasör oluşturuyoruz.
+  Hashing klasöründe HashingHelper adında bir class oluşturuyoruz.
+  -------------------------
+  ﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Core.Utilities.Security.Hashing
+{
+    public class HashingHelper
+    {
+        public static void CreatePasswordHash(string password,out byte[] passwordHash,out byte[] passwordSalt)
+        {
+            using (var hmac=new System.Security.Cryptography.HMACSHA512())
+            {
+                passwordSalt = hmac.Key;
+                passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
+            }
+        }
+
+        public static bool VerifyPasswordHash(string password,byte[] passwordHash,byte[] passwordSalt)
+        {
+            using (var hmac = new System.Security.Cryptography.HMACSHA512(passwordSalt))
+            {
+                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
+                for (int i = 0; i < computedHash.Length; i++)
+                {
+                    if (computedHash[i]!=passwordHash[i])
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+           
+        }
+    }
+}
+-------------------------
+Şimdi Encryption klasöründe SecurityKeyHelper adında bir class oluşturuyoruz.
+-------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+
+namespace Core.Utilities.Security.Encryption
+{
+    public class SecurityKeyHelper
+    {
+        public static SecurityKey CreateSecurityKey(string securityKey)
+        {
+            return new SymmetricSecurityKey(Encoding.UTF8.GetBytes(securityKey));
+        }
+    }
+}
+------------------------    
+SecurityKey metodunu kullanabilmk için Nuget Package manager'dan Microsoft.Identity.ModelToken paketinin yüklenmesi gerekiyor. Visual studionun yeni sürümlerinde bunun üzrine geldiğinizde kolayca install edilebilmektedir. Eğer yüklüyse de using ile eklemeniz yapılabilmektedir. Bu klasöre birde SigningCredentialsHelper adında bir class daha oluşturuyoruz.
+------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+
+namespace Core.Utilities.Security.Encryption
+{
+    public class SigningCredentialsHelper
+    {
+        public static SigningCredentials CreateSigningCredentials(SecurityKey securityKey)
+        {
+            return new SigningCredentials(securityKey,SecurityAlgorithms.HmacSha512Signature);
+        }
+    }
+}
+---------------------------
+JWT klasöründe AccessToken adında bir class oluşturuyoruz.
+--------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Core.Utilities.Security.JWT
+{
+    public class AccessToken
+    {
+        public string Token { get; set; }
+        public DateTime Expiration { get; set; }
+
+    }
+}
+-----------------------------
+yine JWT klasöründe ITokenHelper isimli bir interface oluşturuyoruz.
+----------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Core.Entities.Concrete;
+
+namespace Core.Utilities.Security.JWT
+{
+    public interface ITokenHelper
+    {
+        AccessToken CreateToken(User user, List<OperationClaim> operationClaims);
+    }
+}
+------------------------------
+yine JWT klasöründe ITokenHelper'den inherite olan JWTHelper adında bir class oluşturuyoruz.
+--------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Security.Claims;
+using System.Text;
+using Core.Entities.Concrete;
+using Core.Extensions;
+using Core.Utilities.Security.Encryption;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+
+namespace Core.Utilities.Security.JWT
+{
+    public class JwtHelper : ITokenHelper
+    {
+        public IConfiguration Configuration { get; }
+        private TokenOptions _tokenOptions;
+        private DateTime _accessTokenExpiration;
+        public JwtHelper(IConfiguration configuration)
+        {
+            Configuration = configuration;
+            _tokenOptions = Configuration.GetSection("TokenOptions").Get<TokenOptions>();
+
+        }
+        public AccessToken CreateToken(User user, List<OperationClaim> operationClaims)
+        {
+            _accessTokenExpiration = DateTime.Now.AddMinutes(_tokenOptions.AccessTokenExpiration);
+            var securityKey = SecurityKeyHelper.CreateSecurityKey(_tokenOptions.SecurityKey);
+            var signingCredentials = SigningCredentialsHelper.CreateSigningCredentials(securityKey);
+            var jwt = CreateJwtSecurityToken(_tokenOptions, user, signingCredentials, operationClaims);
+            var jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
+            var token = jwtSecurityTokenHandler.WriteToken(jwt);
+
+            return new AccessToken
+            {
+                Token = token,
+                Expiration = _accessTokenExpiration
+            };
+
+        }
+
+        public JwtSecurityToken CreateJwtSecurityToken(TokenOptions tokenOptions, User user,
+            SigningCredentials signingCredentials, List<OperationClaim> operationClaims)
+        {
+            var jwt = new JwtSecurityToken(
+                issuer: tokenOptions.Issuer,
+                audience: tokenOptions.Audience,
+                expires: _accessTokenExpiration,
+                notBefore: DateTime.Now,
+                claims: SetClaims(user, operationClaims),
+                signingCredentials: signingCredentials
+            );
+            return jwt;
+        }
+
+        private IEnumerable<Claim> SetClaims(User user, List<OperationClaim> operationClaims)
+        {
+            var claims = new List<Claim>();
+            claims.AddNameIdentifier(user.Id.ToString());
+            claims.AddEmail(user.Email);
+            claims.AddName($"{user.FirstName} {user.LastName}");
+            claims.AddRoles(operationClaims.Select(c => c.Name).ToArray());
+
+            return claims;
+        }
+    }
+}
+-------------------------
+class taki IConfiguration bizim appsettings dosyamızı okumaya yarar. TokenOptions'un çalışabilmesi için bu JWT klasörü içine bu isimde bir class oluşturun.
+------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Core.Utilities.Security.JWT
+{
+    public class TokenOptions
+    {
+        public string Audience { get; set; }
+        public string Issuer { get; set; }
+        public int AccessTokenExpiration { get; set; }
+        public string SecurityKey { get; set; }
+    }
+}
+-------------------------
+
+
   
