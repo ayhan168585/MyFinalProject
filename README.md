@@ -999,4 +999,76 @@ namespace Core.Utilities.Business
     }
 }
 ------------------------
-JWT sistemini kuruyoruz. Bu sistm kullanıcılara yetkilerine göre işlem yapabilme yetkisi ve sisteme giriş yetkisi vermeye yarar.
+JWT sistemini kuruyoruz. Bu sistm kullanıcılara yetkilerine göre işlem yapabilme yetkisi ve sisteme giriş yetkisi vermeye yarar. SQL Server Obect Explorer (Wiew menüsünde) de Northwind database'ine 3 tane tablo ekliyoruz. Bu tablolar Users,OperationClaims ve UserOperationClaims Users tablosunda Id,FirstName,LastName,Email,PasswordHash,PasswordSalt,Status alanları bulunur. OperationClaims tablosunda Id,Name alanları, UserOperationClaims tablosunda Id,UserId,OperationClaimId alanları bulunacak. Daha sonra bu tabloların entities lerini oluşturuyoruz.
+Bu tabloları Entities katmanında oluşturabiliriz. Ama biz bu yaptığımız yetkilendirmeyi tüm projelerde kullanacağımız bir yapı olacağından Core katmanı içinde yapıyoruz. Bu sebeple Core katmanındaki Entities klasörüne Concrete adında bir klasör açıyoruz. ve bu classları bunun içine oluşturuyoruz.
+User class'ı
+----------------------------
+using Core.Entities.Abstract;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Entities.Concrete
+{
+    public class User:IEntity
+    {
+        public int Id { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Email { get; set; }
+        public byte[] PasswordHash { get; set; }
+        public byte[] PasswordSalt { get; set; }
+        public bool Status { get; set; }
+    }
+}
+---------------------------
+OperationClaim class'ı
+-------------------------- 
+using Core.Entities.Abstract;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Entities.Concrete
+{
+    public class OperationClaim:IEntity
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
+}
+
+UserOperationClaim class'ı
+----------------------------
+using Core.Entities.Abstract;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Entities.Concrete
+{
+    public class UserOperationClaim:IEntity
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public int OperationClaimId { get; set; }
+    }
+}
+
+WebAPI katmanında appsetting dosyasında TokenOptions adında bir anahtar ekliyoruz.
+---------------------
+ "TokenOptions": {
+    "Audience": "engin@engin.com",
+    "Issuer": "engin@engin.com",
+    "AccessTokenExpiration": 10,
+    "SecurityKey": "mysupersecretkeymysupersecretkey"
+
+  }, 
+  Bu TokenOption içinde olmazsa olmaz bazı alanlar vardır ki bu token'in bize ait olduğu anlaşılsın. Bu alanlar Audience,Issuer,AccessTokenExpiration ve SecurityKey alanlarıdr.
+  Audience kısmına sitemizin web adresini yada yukarıda görüldüğü gibi verebiliriz. Issuer alanına da aynı ismi vrebiliriz. AccessTokenExpiration oluşturduğumuz token'in geçerlilik süresini verir karşılığı dakika cinsindendir. SecurityKey alanı ise bu token'i kullanırken kullanacağımız anahtardır.
