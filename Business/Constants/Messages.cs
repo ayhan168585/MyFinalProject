@@ -36,5 +36,6 @@ namespace Business.Constants
         public static string OrderUpdated = "Sipariş güncellendi.";
         public static string AyrımYeri2 = "---------------------------------------VALIDATION";
         public static string ProductNotEmpty = "Ürün adı boş olamaz";
+        public static string? AuthorizationDenied="Bu işlemi yapmak için yetkiniz yok";
     }
 }
