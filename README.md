@@ -1178,16 +1178,15 @@ namespace Core.Utilities.Security.JWT
     }
 }
 ------------------------------
-yine JWT klasöründe ITokenHelper'den inherite olan JWTHelper adında bir class oluşturuyoruz.
+yine JWT klasöründe ITokenHelper'den inherite olan JWTHelper adında bir class oluşturuyoruz. Ama bunun için nuget package manager den Microsoft.Extensions.Configuration ve  Microsoft.Extensions.Configuration.Binder paketleri yüklenmelidir.
 --------------------------
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using Core.Entities.Concrete;
-using Core.Extensions;
 using Core.Utilities.Security.Encryption;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -1238,18 +1237,22 @@ namespace Core.Utilities.Security.JWT
 
         private IEnumerable<Claim> SetClaims(User user, List<OperationClaim> operationClaims)
         {
-            var claims = new List<Claim>();
-            claims.AddNameIdentifier(user.Id.ToString());
-            claims.AddEmail(user.Email);
-            claims.AddName($"{user.FirstName} {user.LastName}");
-            claims.AddRoles(operationClaims.Select(c => c.Name).ToArray());
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
+            };
+
+            claims.AddRange(operationClaims.Select(c => new Claim(ClaimTypes.Role, c.Name)));
 
             return claims;
         }
     }
 }
+
 -------------------------
-class taki IConfiguration bizim appsettings dosyamızı okumaya yarar. TokenOptions'un çalışabilmesi için bu JWT klasörü içine bu isimde bir class oluşturun.
+class taki IConfiguration bizim appsettings dosyamızı okumaya yarar. TokenOptions'un çalışabilmesi için bu JWT klasörü içine bu isimde bir class oluşturun. Bu bizim için bir Helper Class appsettings dosyasında TokenOptions için bir model bir veritabanı class'ı olmadığından ismide çoğul çünkü optionlar içeriyor.(Normalde veritabanı entity si oluştururken class ismi tekil veritabanında oluşan tablo ismi ise çoğul)
 ------------------------
 ﻿using System;
 using System.Collections.Generic;
@@ -1266,6 +1269,7 @@ namespace Core.Utilities.Security.JWT
     }
 }
 -------------------------
+
 
 
   
