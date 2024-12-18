@@ -1178,7 +1178,7 @@ namespace Core.Utilities.Security.JWT
     }
 }
 ------------------------------
-yine JWT klasöründe ITokenHelper'den inherite olan JWTHelper adında bir class oluşturuyoruz. Ama bunun için nuget package manager den Microsoft.Extensions.Configuration ve  Microsoft.Extensions.Configuration.Binder paketleri yüklenmelidir.
+yine JWT klasöründe ITokenHelper'den inherite olan JWTHelper adında bir class oluşturuyoruz. Ama bunun için nuget package manager den System.IdendityModel.Tokns.jwt, Microsoft.Extensions.Configuration ve  Microsoft.Extensions.Configuration.Binder paketleri yüklenmelidir.
 --------------------------
 using System;
 using System.Collections.Generic;
@@ -1235,19 +1235,19 @@ namespace Core.Utilities.Security.JWT
             return jwt;
         }
 
-        private IEnumerable<Claim> SetClaims(User user, List<OperationClaim> operationClaims)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
-            };
+       private IEnumerable<Claim> SetClaims(User user, List<OperationClaim> operationClaims)
+ {
+     var claims = new List<Claim>
+     {
+         new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+         new Claim(ClaimTypes.Email, user.Email),
+         new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
+     };
 
-            claims.AddRange(operationClaims.Select(c => new Claim(ClaimTypes.Role, c.Name)));
+     claims.AddRange(operationClaims.Select(c => new Claim(ClaimTypes.Role, c.Name)).ToArray());
 
-            return claims;
-        }
+     return claims;
+ }
     }
 }
 
