@@ -1269,7 +1269,362 @@ namespace Core.Utilities.Security.JWT
     }
 }
 -------------------------
+ private IEnumerable<Claim> SetClaims(User user, List<OperationClaim> operationClaims)
+ {
+     var claims = new List<Claim>();
+     claims.AddNameIdentifier(user.Id.ToString());
+     claims.AddEmail(user.Email);
+     claims.AddName($"{user.FirstName} {user.LastName}");
+     claims.AddRoles(operationClaims.Select(c => c.Name).ToArray());
 
+     return claims;
+ }
+class'ındaki hatayı ortadan kaldırmak için class'ı extend ediyoruz. yani bu sınıfa kendi metotlarımızı ekliyoruz. Bu eklemeler AddNam,AddEmail,AddName,AddRoles metotlarıdır. Bir Extented class yazabilmek için hem class hemde metot static olmalıdır.
+Bu sebeple Core katmanında Extensions adında bir klasör oluşturuyoruz ve içine ClaimExtensions adında bir static class oluşturuyoruz.
+----------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.IdentityModel.JsonWebTokens;
+
+namespace Core.Extensions
+{
+    public static class ClaimExtensions
+    {
+        public static void AddEmail(this ICollection<Claim> claims, string email)
+        {
+            claims.Add(new Claim(JwtRegisteredClaimNames.Email, email));
+        }
+
+        public static void AddName(this ICollection<Claim> claims, string name)
+        {
+            claims.Add(new Claim(ClaimTypes.Name, name));
+        }
+
+        public static void AddNameIdentifier(this ICollection<Claim> claims, string nameIdentifier)
+        {
+            claims.Add(new Claim(ClaimTypes.NameIdentifier, nameIdentifier));
+        }
+
+        public static void AddRoles(this ICollection<Claim> claims, string[] roles)
+        {
+            roles.ToList().ForEach(role => claims.Add(new Claim(ClaimTypes.Role, role)));
+        }
+    }
+}
+--------------------------
+Aynı şekilde extensions klasörüne ClaimsPrincipalExtensions adında yeni bir extend class oluşturuyoruz.
+---------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Text;
+
+namespace Core.Extensions
+{
+    public static class ClaimsPrincipalExtensions
+    {
+        public static List<string> Claims(this ClaimsPrincipal claimsPrincipal, string claimType)
+        {
+            var result = claimsPrincipal?.FindAll(claimType)?.Select(x => x.Value).ToList();
+            return result;
+        }
+
+        public static List<string> ClaimRoles(this ClaimsPrincipal claimsPrincipal)
+        {
+            return claimsPrincipal?.Claims(ClaimTypes.Role);
+        }
+    }
+}
+----------------------
+Bu yetkilendirmeyi Aspect olarak yazacağız. yetkilendirme aspectleri genel olarak Business katmanına yazılır çünkü her projenin yetkilendirmesi farklıdır. bu sebeple tüm projelerde kullanacağımız Core katmanında yazılmaz. Bu sbeple Business katmanında BusinessAspects adında bir klasör oluşturuyoruz. İçine Autofac kullanacağımız için Autofac adında bir klasör oluşturuyoruz.Bu klasörün içine SecuredOperation adında bir class oluşturuyoruz.
+------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Business.Constants;
+using Castle.DynamicProxy;
+using Core.Extensions;
+using Core.Utilities.Interceptors;
+using Core.Utilities.IoC;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Business.BusinessAspects.Autofac
+{
+    public class SecuredOperation:MethodInterception
+    {
+        private string[] _roles;
+        private IHttpContextAccessor _httpContextAccessor;
+
+        public SecuredOperation(string roles)
+        {
+            _roles = roles.Split(',');
+            _httpContextAccessor =  ServiceTool.ServiceProvider.GetService<IHttpContextAccessor>();
+
+        }
+
+        protected override void OnBefore(IInvocation invocation)
+        {
+            var roleClaims = _httpContextAccessor.HttpContext.User.ClaimRoles();
+            foreach (var role in _roles)
+            {
+                if (roleClaims.Contains(role))
+                {
+                    return;
+                }
+            }
+            throw new Exception(Messages.AuthorizationDenied);
+        }
+    }
+}
+------------------------
+Bu class taki hataları çözmek için öncelikle nuget package manager'den yada hata veren metinin üzerine tıklayarak install komutu üzerinden using Microsoft.AspNetCore.Http paketini yüklüyoruz. Ayrıca ServiceTool classımızı da yazıyoruz. Bunu yazmak için Core katmanında Utilities klasöründe IoC adında yeni bir klasör açıyoruz ve içine ServiceTool adında bir class oluşturuyoruz.
+-----------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Utilities.IoC
+{
+    public static class ServiceTool
+    {
+        public static IServiceProvider ServiceProvider { get; private set; }
+
+        public static IServiceCollection Create(IServiceCollection services)
+        {
+            ServiceProvider = services.BuildServiceProvider();
+            return services;
+        }
+    }
+}
+-------------------------
+Business katmanında bazı paketleri kurmamız gerekiyor. Bunlar Autofac,Autofac.Extensions.DependencyExtension ve Autofac.Extras.DynamicProxy bunlar kurulduktan sonra artık productManager sınıfında Add metodunda yetki kontrolü yaparken Add metodunun hemen üstünde  [SecuredOperation("product.add,Admin")] şeklinde kullanılabilir.
+sistemimizi kurduk şimdi DataAccess katmanında Abstract klasöründe IUserDal interface'i oluşturuyoruz.
+-------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Core.DataAccess;
+using Core.Entities.Concrete;
+
+namespace DataAccess.Abstract
+{
+    public interface IUserDal : IEntityRepository<User>
+    {
+        List<OperationClaim> GetClaims(User user);
+    }
+}
+--------------------------
+Ardından DataAccess katmanı Concrete klasöründe EfUserDal classını oluşturuyoruz. ve NorthwindContext classına da Jwt işlemi için oluşturduğumuz Core katmanındaki Entities klasöründeki Concrete klaösründeki 3 classımızı DbSet<> olarak ekliyoruz.
+-------------------------
+using Core.DataAccess.EntityFramework;
+using Core.Entities.Concrete;
+using DataAccess.Abstract;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataAccess.Concrete.EntityFramework
+{
+    public class EfUserDal : EfEntityRepositoryBase<User, NorthwindContext>, IUserDal
+    {
+        public List<OperationClaim> GetClaims(User user)
+        {
+            using (var context = new NorthwindContext())
+            {
+                var result = from operationClaim in context.OperationClaims
+                             join userOperationClaim in context.UserOperationClaims
+                                 on operationClaim.Id equals userOperationClaim.OperationClaimId
+                             where userOperationClaim.UserId == user.Id
+                             select new OperationClaim { Id = operationClaim.Id, Name = operationClaim.Name };
+                return result.ToList();
+
+            }
+        }
+    }
+}
+-------------------------
+using Core.Entities.Concrete;
+using Entities.Concrete;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataAccess.Concrete.EntityFramework
+{
+    public class NorthwindContext:DbContext
+    {
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseSqlServer(@"Server=AYHAN;Database=NORTHWND;Trusted_Connection=true;TrustServerCertificate=true;");
+        }
+        public DbSet<Product> Products { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<Customer> Customers { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OperationClaim> OperationClaims { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<UserOperationClaim> UserOperationClaims { get; set; }
+    }
+}
+----------------------
+Business katmanında Abstract klasöründe IUserService ve IAuthSrvice interface
+----------------------
+using Core.Entities.Concrete;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Business.Abstract
+{
+    public interface IUserService
+    {
+        List<OperationClaim> GetClaims(User user);
+        void Add(User user);
+        User GetByMail(string email);
+    }
+}
+-------------------------
+﻿using Core.Entities.Concrete;
+using Core.Utilities.Results;
+using Core.Utilities.Security.JWT;
+using Entities.DTOs;
+
+namespace Business.Abstract
+{
+    public interface IAuthService
+    {
+        IDataResult<User> Register(UserForRegisterDto userForRegisterDto, string password);
+        IDataResult<User> Login(UserForLoginDto userForLoginDto);
+        IResult UserExists(string email);
+        IDataResult<AccessToken> CreateAccessToken(User user);
+    }
+}
+-----------------------
+
+concrete klasöründ UserManager ve AuthManager classı
+--------------------------
+using Business.Abstract;
+using Core.Entities.Concrete;
+using DataAccess.Abstract;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Business.Concrete
+{
+    public class UserManager : IUserService
+    {
+        IUserDal _userDal;
+
+        public UserManager(IUserDal userDal)
+        {
+            _userDal = userDal;
+        }
+
+        public List<OperationClaim> GetClaims(User user)
+        {
+            return _userDal.GetClaims(user);
+        }
+
+        public void Add(User user)
+        {
+            _userDal.Add(user);
+        }
+
+        public User GetByMail(string email)
+        {
+            return _userDal.Get(u => u.Email == email);
+        }
+    }
+}
+----------------------
+﻿using Business.Abstract;
+using Business.Constants;
+using Core.Entities.Concrete;
+using Core.Utilities.Results;
+using Core.Utilities.Security.Hashing;
+using Core.Utilities.Security.JWT;
+using Entities.DTOs;
+
+namespace Business.Concrete
+{
+    public class AuthManager : IAuthService
+    {
+        private IUserService _userService;
+        private ITokenHelper _tokenHelper;
+
+        public AuthManager(IUserService userService, ITokenHelper tokenHelper)
+        {
+            _userService = userService;
+            _tokenHelper = tokenHelper;
+        }
+
+        public IDataResult<User> Register(UserForRegisterDto userForRegisterDto, string password)
+        {
+            byte[] passwordHash, passwordSalt;
+            HashingHelper.CreatePasswordHash(password, out passwordHash, out passwordSalt);
+            var user = new User
+            {
+                Email = userForRegisterDto.Email,
+                FirstName = userForRegisterDto.FirstName,
+                LastName = userForRegisterDto.LastName,
+                PasswordHash = passwordHash,
+                PasswordSalt = passwordSalt,
+                Status = true
+            };
+            _userService.Add(user);
+            return new SuccessDataResult<User>(user, Messages.UserRegistered);
+        }
+
+        public IDataResult<User> Login(UserForLoginDto userForLoginDto)
+        {
+            var userToCheck = _userService.GetByMail(userForLoginDto.Email);
+            if (userToCheck == null)
+            {
+                return new ErrorDataResult<User>(Messages.UserNotFound);
+            }
+
+            if (!HashingHelper.VerifyPasswordHash(userForLoginDto.Password, userToCheck.PasswordHash, userToCheck.PasswordSalt))
+            {
+                return new ErrorDataResult<User>(Messages.PasswordError);
+            }
+
+            return new SuccessDataResult<User>(userToCheck, Messages.SuccessfulLogin);
+        }
+
+        public IResult UserExists(string email)
+        {
+            if (_userService.GetByMail(email) != null)
+            {
+                return new ErrorResult(Messages.UserAlreadyExists);
+            }
+            return new SuccessResult();
+        }
+
+        public IDataResult<AccessToken> CreateAccessToken(User user)
+        {
+            var claims = _userService.GetClaims(user);
+            var accessToken = _tokenHelper.CreateToken(user, claims);
+            return new SuccessDataResult<AccessToken>(accessToken, Messages.AccessTokenCreated);
+        }
+    }
+}
+---------------------
 
 
   
