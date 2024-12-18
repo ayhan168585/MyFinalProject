@@ -1071,5 +1071,560 @@ WebAPI katmanında appsetting dosyasında TokenOptions adında bir anahtar ekliy
 
   }, 
   Bu TokenOption içinde olmazsa olmaz bazı alanlar vardır ki bu token'in bize ait olduğu anlaşılsın. Bu alanlar Audience,Issuer,AccessTokenExpiration ve SecurityKey alanlarıdr.
-  Audience kısmına sitemizin web adresini yada yukarıda görüldüğü gibi verebiliriz. Issuer alanına da aynı ismi vrebiliriz. AccessTokenExpiration oluşturduğumuz token'in geçerlilik süresini verir karşılığı dakika cinsindendir. SecurityKey alanı ise bu token'i kullanırken kullanacağımız anahtardır. Appsettings dosyasındaki bu düzenlemeyi yaptıktan sonra Core katmanındaki Utilities klasörüne Security adında bir klasör açıyoruz. Bu klasörün içindede Hashing,Encyription,JWT adında  tane alt klasör oluşturuyoruz.
+  Audience kısmına sitemizin web adresini yada yukarıda görüldüğü gibi verebiliriz. Issuer alanına da aynı ismi vrebiliriz. AccessTokenExpiration oluşturduğumuz token'in geçerlilik süresini verir karşılığı dakika cinsindendir. SecurityKey alanı ise bu token'i kullanırken kullanacağımız anahtardır. Appsettings dosyasındaki bu düzenlemeyi yaptıktan sonra Core katmanındaki Utilities klasörüne Security adında bir klasör açıyoruz. Bu klasörün içindede Hashing,Encyription,JWT adında  3 tane alt klasör oluşturuyoruz.
+  Hashing klasöründe HashingHelper adında bir class oluşturuyoruz.
+  -------------------------
+  ﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Core.Utilities.Security.Hashing
+{
+    public class HashingHelper
+    {
+        public static void CreatePasswordHash(string password,out byte[] passwordHash,out byte[] passwordSalt)
+        {
+            using (var hmac=new System.Security.Cryptography.HMACSHA512())
+            {
+                passwordSalt = hmac.Key;
+                passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
+            }
+        }
+
+        public static bool VerifyPasswordHash(string password,byte[] passwordHash,byte[] passwordSalt)
+        {
+            using (var hmac = new System.Security.Cryptography.HMACSHA512(passwordSalt))
+            {
+                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
+                for (int i = 0; i < computedHash.Length; i++)
+                {
+                    if (computedHash[i]!=passwordHash[i])
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+           
+        }
+    }
+}
+-------------------------
+Şimdi Encryption klasöründe SecurityKeyHelper adında bir class oluşturuyoruz.
+-------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+
+namespace Core.Utilities.Security.Encryption
+{
+    public class SecurityKeyHelper
+    {
+        public static SecurityKey CreateSecurityKey(string securityKey)
+        {
+            return new SymmetricSecurityKey(Encoding.UTF8.GetBytes(securityKey));
+        }
+    }
+}
+------------------------    
+SecurityKey metodunu kullanabilmk için Nuget Package manager'dan Microsoft.Identity.ModelToken paketinin yüklenmesi gerekiyor. Visual studionun yeni sürümlerinde bunun üzrine geldiğinizde kolayca install edilebilmektedir. Eğer yüklüyse de using ile eklemeniz yapılabilmektedir. Bu klasöre birde SigningCredentialsHelper adında bir class daha oluşturuyoruz.
+------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+
+namespace Core.Utilities.Security.Encryption
+{
+    public class SigningCredentialsHelper
+    {
+        public static SigningCredentials CreateSigningCredentials(SecurityKey securityKey)
+        {
+            return new SigningCredentials(securityKey,SecurityAlgorithms.HmacSha512Signature);
+        }
+    }
+}
+---------------------------
+JWT klasöründe AccessToken adında bir class oluşturuyoruz.
+--------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Core.Utilities.Security.JWT
+{
+    public class AccessToken
+    {
+        public string Token { get; set; }
+        public DateTime Expiration { get; set; }
+
+    }
+}
+-----------------------------
+yine JWT klasöründe ITokenHelper isimli bir interface oluşturuyoruz.
+----------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Core.Entities.Concrete;
+
+namespace Core.Utilities.Security.JWT
+{
+    public interface ITokenHelper
+    {
+        AccessToken CreateToken(User user, List<OperationClaim> operationClaims);
+    }
+}
+------------------------------
+yine JWT klasöründe ITokenHelper'den inherite olan JWTHelper adında bir class oluşturuyoruz. Ama bunun için nuget package manager den System.IdendityModel.Tokns.jwt, Microsoft.Extensions.Configuration ve  Microsoft.Extensions.Configuration.Binder paketleri yüklenmelidir.
+--------------------------
+using System;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Security.Claims;
+using System.Text;
+using Core.Entities.Concrete;
+using Core.Utilities.Security.Encryption;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+
+namespace Core.Utilities.Security.JWT
+{
+    public class JwtHelper : ITokenHelper
+    {
+        public IConfiguration Configuration { get; }
+        private TokenOptions _tokenOptions;
+        private DateTime _accessTokenExpiration;
+        public JwtHelper(IConfiguration configuration)
+        {
+            Configuration = configuration;
+            _tokenOptions = Configuration.GetSection("TokenOptions").Get<TokenOptions>();
+
+        }
+        public AccessToken CreateToken(User user, List<OperationClaim> operationClaims)
+        {
+            _accessTokenExpiration = DateTime.Now.AddMinutes(_tokenOptions.AccessTokenExpiration);
+            var securityKey = SecurityKeyHelper.CreateSecurityKey(_tokenOptions.SecurityKey);
+            var signingCredentials = SigningCredentialsHelper.CreateSigningCredentials(securityKey);
+            var jwt = CreateJwtSecurityToken(_tokenOptions, user, signingCredentials, operationClaims);
+            var jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
+            var token = jwtSecurityTokenHandler.WriteToken(jwt);
+
+            return new AccessToken
+            {
+                Token = token,
+                Expiration = _accessTokenExpiration
+            };
+
+        }
+
+        public JwtSecurityToken CreateJwtSecurityToken(TokenOptions tokenOptions, User user,
+            SigningCredentials signingCredentials, List<OperationClaim> operationClaims)
+        {
+            var jwt = new JwtSecurityToken(
+                issuer: tokenOptions.Issuer,
+                audience: tokenOptions.Audience,
+                expires: _accessTokenExpiration,
+                notBefore: DateTime.Now,
+                claims: SetClaims(user, operationClaims),
+                signingCredentials: signingCredentials
+            );
+            return jwt;
+        }
+
+       private IEnumerable<Claim> SetClaims(User user, List<OperationClaim> operationClaims)
+ {
+     var claims = new List<Claim>
+     {
+         new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+         new Claim(ClaimTypes.Email, user.Email),
+         new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
+     };
+
+     claims.AddRange(operationClaims.Select(c => new Claim(ClaimTypes.Role, c.Name)).ToArray());
+
+     return claims;
+ }
+    }
+}
+
+-------------------------
+class taki IConfiguration bizim appsettings dosyamızı okumaya yarar. TokenOptions'un çalışabilmesi için bu JWT klasörü içine bu isimde bir class oluşturun. Bu bizim için bir Helper Class appsettings dosyasında TokenOptions için bir model bir veritabanı class'ı olmadığından ismide çoğul çünkü optionlar içeriyor.(Normalde veritabanı entity si oluştururken class ismi tekil veritabanında oluşan tablo ismi ise çoğul)
+------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Core.Utilities.Security.JWT
+{
+    public class TokenOptions
+    {
+        public string Audience { get; set; }
+        public string Issuer { get; set; }
+        public int AccessTokenExpiration { get; set; }
+        public string SecurityKey { get; set; }
+    }
+}
+-------------------------
+ private IEnumerable<Claim> SetClaims(User user, List<OperationClaim> operationClaims)
+ {
+     var claims = new List<Claim>();
+     claims.AddNameIdentifier(user.Id.ToString());
+     claims.AddEmail(user.Email);
+     claims.AddName($"{user.FirstName} {user.LastName}");
+     claims.AddRoles(operationClaims.Select(c => c.Name).ToArray());
+
+     return claims;
+ }
+class'ındaki hatayı ortadan kaldırmak için class'ı extend ediyoruz. yani bu sınıfa kendi metotlarımızı ekliyoruz. Bu eklemeler AddNam,AddEmail,AddName,AddRoles metotlarıdır. Bir Extented class yazabilmek için hem class hemde metot static olmalıdır.
+Bu sebeple Core katmanında Extensions adında bir klasör oluşturuyoruz ve içine ClaimExtensions adında bir static class oluşturuyoruz.
+----------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.IdentityModel.JsonWebTokens;
+
+namespace Core.Extensions
+{
+    public static class ClaimExtensions
+    {
+        public static void AddEmail(this ICollection<Claim> claims, string email)
+        {
+            claims.Add(new Claim(JwtRegisteredClaimNames.Email, email));
+        }
+
+        public static void AddName(this ICollection<Claim> claims, string name)
+        {
+            claims.Add(new Claim(ClaimTypes.Name, name));
+        }
+
+        public static void AddNameIdentifier(this ICollection<Claim> claims, string nameIdentifier)
+        {
+            claims.Add(new Claim(ClaimTypes.NameIdentifier, nameIdentifier));
+        }
+
+        public static void AddRoles(this ICollection<Claim> claims, string[] roles)
+        {
+            roles.ToList().ForEach(role => claims.Add(new Claim(ClaimTypes.Role, role)));
+        }
+    }
+}
+--------------------------
+Aynı şekilde extensions klasörüne ClaimsPrincipalExtensions adında yeni bir extend class oluşturuyoruz.
+---------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Text;
+
+namespace Core.Extensions
+{
+    public static class ClaimsPrincipalExtensions
+    {
+        public static List<string> Claims(this ClaimsPrincipal claimsPrincipal, string claimType)
+        {
+            var result = claimsPrincipal?.FindAll(claimType)?.Select(x => x.Value).ToList();
+            return result;
+        }
+
+        public static List<string> ClaimRoles(this ClaimsPrincipal claimsPrincipal)
+        {
+            return claimsPrincipal?.Claims(ClaimTypes.Role);
+        }
+    }
+}
+----------------------
+Bu yetkilendirmeyi Aspect olarak yazacağız. yetkilendirme aspectleri genel olarak Business katmanına yazılır çünkü her projenin yetkilendirmesi farklıdır. bu sebeple tüm projelerde kullanacağımız Core katmanında yazılmaz. Bu sbeple Business katmanında BusinessAspects adında bir klasör oluşturuyoruz. İçine Autofac kullanacağımız için Autofac adında bir klasör oluşturuyoruz.Bu klasörün içine SecuredOperation adında bir class oluşturuyoruz.
+------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Business.Constants;
+using Castle.DynamicProxy;
+using Core.Extensions;
+using Core.Utilities.Interceptors;
+using Core.Utilities.IoC;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Business.BusinessAspects.Autofac
+{
+    public class SecuredOperation:MethodInterception
+    {
+        private string[] _roles;
+        private IHttpContextAccessor _httpContextAccessor;
+
+        public SecuredOperation(string roles)
+        {
+            _roles = roles.Split(',');
+            _httpContextAccessor =  ServiceTool.ServiceProvider.GetService<IHttpContextAccessor>();
+
+        }
+
+        protected override void OnBefore(IInvocation invocation)
+        {
+            var roleClaims = _httpContextAccessor.HttpContext.User.ClaimRoles();
+            foreach (var role in _roles)
+            {
+                if (roleClaims.Contains(role))
+                {
+                    return;
+                }
+            }
+            throw new Exception(Messages.AuthorizationDenied);
+        }
+    }
+}
+------------------------
+Bu class taki hataları çözmek için öncelikle nuget package manager'den yada hata veren metinin üzerine tıklayarak install komutu üzerinden using Microsoft.AspNetCore.Http paketini yüklüyoruz. Ayrıca ServiceTool classımızı da yazıyoruz. Bunu yazmak için Core katmanında Utilities klasöründe IoC adında yeni bir klasör açıyoruz ve içine ServiceTool adında bir class oluşturuyoruz.
+-----------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Utilities.IoC
+{
+    public static class ServiceTool
+    {
+        public static IServiceProvider ServiceProvider { get; private set; }
+
+        public static IServiceCollection Create(IServiceCollection services)
+        {
+            ServiceProvider = services.BuildServiceProvider();
+            return services;
+        }
+    }
+}
+-------------------------
+Business katmanında bazı paketleri kurmamız gerekiyor. Bunlar Autofac,Autofac.Extensions.DependencyExtension ve Autofac.Extras.DynamicProxy bunlar kurulduktan sonra artık productManager sınıfında Add metodunda yetki kontrolü yaparken Add metodunun hemen üstünde  [SecuredOperation("product.add,Admin")] şeklinde kullanılabilir.
+sistemimizi kurduk şimdi DataAccess katmanında Abstract klasöründe IUserDal interface'i oluşturuyoruz.
+-------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Core.DataAccess;
+using Core.Entities.Concrete;
+
+namespace DataAccess.Abstract
+{
+    public interface IUserDal : IEntityRepository<User>
+    {
+        List<OperationClaim> GetClaims(User user);
+    }
+}
+--------------------------
+Ardından DataAccess katmanı Concrete klasöründe EfUserDal classını oluşturuyoruz. ve NorthwindContext classına da Jwt işlemi için oluşturduğumuz Core katmanındaki Entities klasöründeki Concrete klaösründeki 3 classımızı DbSet<> olarak ekliyoruz.
+-------------------------
+using Core.DataAccess.EntityFramework;
+using Core.Entities.Concrete;
+using DataAccess.Abstract;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataAccess.Concrete.EntityFramework
+{
+    public class EfUserDal : EfEntityRepositoryBase<User, NorthwindContext>, IUserDal
+    {
+        public List<OperationClaim> GetClaims(User user)
+        {
+            using (var context = new NorthwindContext())
+            {
+                var result = from operationClaim in context.OperationClaims
+                             join userOperationClaim in context.UserOperationClaims
+                                 on operationClaim.Id equals userOperationClaim.OperationClaimId
+                             where userOperationClaim.UserId == user.Id
+                             select new OperationClaim { Id = operationClaim.Id, Name = operationClaim.Name };
+                return result.ToList();
+
+            }
+        }
+    }
+}
+-------------------------
+using Core.Entities.Concrete;
+using Entities.Concrete;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataAccess.Concrete.EntityFramework
+{
+    public class NorthwindContext:DbContext
+    {
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseSqlServer(@"Server=AYHAN;Database=NORTHWND;Trusted_Connection=true;TrustServerCertificate=true;");
+        }
+        public DbSet<Product> Products { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<Customer> Customers { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OperationClaim> OperationClaims { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<UserOperationClaim> UserOperationClaims { get; set; }
+    }
+}
+----------------------
+Business katmanında Abstract klasöründe IUserService ve IAuthSrvice interface
+----------------------
+using Core.Entities.Concrete;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Business.Abstract
+{
+    public interface IUserService
+    {
+        List<OperationClaim> GetClaims(User user);
+        void Add(User user);
+        User GetByMail(string email);
+    }
+}
+-------------------------
+﻿using Core.Entities.Concrete;
+using Core.Utilities.Results;
+using Core.Utilities.Security.JWT;
+using Entities.DTOs;
+
+namespace Business.Abstract
+{
+    public interface IAuthService
+    {
+        IDataResult<User> Register(UserForRegisterDto userForRegisterDto, string password);
+        IDataResult<User> Login(UserForLoginDto userForLoginDto);
+        IResult UserExists(string email);
+        IDataResult<AccessToken> CreateAccessToken(User user);
+    }
+}
+-----------------------
+
+concrete klasöründ UserManager ve AuthManager classı
+--------------------------
+using Business.Abstract;
+using Core.Entities.Concrete;
+using DataAccess.Abstract;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Business.Concrete
+{
+    public class UserManager : IUserService
+    {
+        IUserDal _userDal;
+
+        public UserManager(IUserDal userDal)
+        {
+            _userDal = userDal;
+        }
+
+        public List<OperationClaim> GetClaims(User user)
+        {
+            return _userDal.GetClaims(user);
+        }
+
+        public void Add(User user)
+        {
+            _userDal.Add(user);
+        }
+
+        public User GetByMail(string email)
+        {
+            return _userDal.Get(u => u.Email == email);
+        }
+    }
+}
+----------------------
+﻿using Business.Abstract;
+using Business.Constants;
+using Core.Entities.Concrete;
+using Core.Utilities.Results;
+using Core.Utilities.Security.Hashing;
+using Core.Utilities.Security.JWT;
+using Entities.DTOs;
+
+namespace Business.Concrete
+{
+    public class AuthManager : IAuthService
+    {
+        private IUserService _userService;
+        private ITokenHelper _tokenHelper;
+
+        public AuthManager(IUserService userService, ITokenHelper tokenHelper)
+        {
+            _userService = userService;
+            _tokenHelper = tokenHelper;
+        }
+
+        public IDataResult<User> Register(UserForRegisterDto userForRegisterDto, string password)
+        {
+            byte[] passwordHash, passwordSalt;
+            HashingHelper.CreatePasswordHash(password, out passwordHash, out passwordSalt);
+            var user = new User
+            {
+                Email = userForRegisterDto.Email,
+                FirstName = userForRegisterDto.FirstName,
+                LastName = userForRegisterDto.LastName,
+                PasswordHash = passwordHash,
+                PasswordSalt = passwordSalt,
+                Status = true
+            };
+            _userService.Add(user);
+            return new SuccessDataResult<User>(user, Messages.UserRegistered);
+        }
+
+        public IDataResult<User> Login(UserForLoginDto userForLoginDto)
+        {
+            var userToCheck = _userService.GetByMail(userForLoginDto.Email);
+            if (userToCheck == null)
+            {
+                return new ErrorDataResult<User>(Messages.UserNotFound);
+            }
+
+            if (!HashingHelper.VerifyPasswordHash(userForLoginDto.Password, userToCheck.PasswordHash, userToCheck.PasswordSalt))
+            {
+                return new ErrorDataResult<User>(Messages.PasswordError);
+            }
+
+            return new SuccessDataResult<User>(userToCheck, Messages.SuccessfulLogin);
+        }
+
+        public IResult UserExists(string email)
+        {
+            if (_userService.GetByMail(email) != null)
+            {
+                return new ErrorResult(Messages.UserAlreadyExists);
+            }
+            return new SuccessResult();
+        }
+
+        public IDataResult<AccessToken> CreateAccessToken(User user)
+        {
+            var claims = _userService.GetClaims(user);
+            var accessToken = _tokenHelper.CreateToken(user, claims);
+            return new SuccessDataResult<AccessToken>(accessToken, Messages.AccessTokenCreated);
+        }
+    }
+}
+---------------------
+
+
   
