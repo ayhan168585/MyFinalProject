@@ -1067,7 +1067,7 @@ WebAPI katmanında appsetting dosyasında TokenOptions adında bir anahtar ekliy
     "Audience": "engin@engin.com",
     "Issuer": "engin@engin.com",
     "AccessTokenExpiration": 10,
-    "SecurityKey": "mysupersecretkeymysupersecretkey"
+    "SecurityKey": "mysupersecretkeymysupersecretkeymysupersecretkeymysupersecretkeymysupersecretkeymysupersecretkey"
 
   }, 
   Bu TokenOption içinde olmazsa olmaz bazı alanlar vardır ki bu token'in bize ait olduğu anlaşılsın. Bu alanlar Audience,Issuer,AccessTokenExpiration ve SecurityKey alanlarıdr.
@@ -1599,12 +1599,12 @@ namespace Business.Concrete
                 return new ErrorDataResult<User>(Messages.UserNotFound);
             }
 
-            if (!HashingHelper.VerifyPasswordHash(userForLoginDto.Password, userToCheck.PasswordHash, userToCheck.PasswordSalt))
+            if (!HashingHelper.VerifyPasswordHash(userForLoginDto.Password, userToCheck.Data.PasswordHash, userToCheck.Data.PasswordSalt))
             {
                 return new ErrorDataResult<User>(Messages.PasswordError);
             }
 
-            return new SuccessDataResult<User>(userToCheck, Messages.SuccessfulLogin);
+            return new SuccessDataResult<User>(userToCheck.Data, Messages.SuccessfulLogin);
         }
 
         public IResult UserExists(string email)
@@ -1619,12 +1619,143 @@ namespace Business.Concrete
         public IDataResult<AccessToken> CreateAccessToken(User user)
         {
             var claims = _userService.GetClaims(user);
-            var accessToken = _tokenHelper.CreateToken(user, claims);
+            var accessToken = _tokenHelper.CreateToken(user, claims.Data);
             return new SuccessDataResult<AccessToken>(accessToken, Messages.AccessTokenCreated);
         }
     }
 }
 ---------------------
+Burada adı geçen iki Dto'yu da oluşturuyoruz bunu oluşturmak için Entities Katmanında Concrete klasöründe Dto klasöründe UserForLoginDto ve UserForRegisterDto adında 2 class oluşturuyoruz.
+----------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Core.Entities;
+
+namespace Entities.DTOs
+{
+    public class UserForLoginDto : IDto
+    {
+        public string Email { get; set; }
+        public string Password { get; set; }
+    }
+}
+-----------------------
+﻿using Core.Entities;
+
+namespace Entities.DTOs
+{
+    public class UserForRegisterDto : IDto
+    {
+        public string Email { get; set; }
+        public string Password { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+    }
+}
+-----------------------
+ve şimdide WebAPI katmanında bunun controllerini yazıyoruz adı AuthController
+-------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Business.Abstract;
+using Entities.DTOs;
+using Microsoft.AspNetCore.Mvc;
+
+namespace WebAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AuthController : Controller
+    {
+        private IAuthService _authService;
+
+        public AuthController(IAuthService authService)
+        {
+            _authService = authService;
+        }
+
+        [HttpPost("login")]
+        public ActionResult Login(UserForLoginDto userForLoginDto)
+        {
+            var userToLogin = _authService.Login(userForLoginDto);
+            if (!userToLogin.Success)
+            {
+                return BadRequest(userToLogin.Message);
+            }
+
+            var result = _authService.CreateAccessToken(userToLogin.Data);
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+
+            return BadRequest(result.Message);
+        }
+
+        [HttpPost("register")]
+        public ActionResult Register(UserForRegisterDto userForRegisterDto)
+        {
+            var userExists = _authService.UserExists(userForRegisterDto.Email);
+            if (!userExists.Success)
+            {
+                return BadRequest(userExists.Message);
+            }
+
+            var registerResult = _authService.Register(userForRegisterDto, userForRegisterDto.Password);
+            var result = _authService.CreateAccessToken(registerResult.Data);
+            if (result.Success)
+            {
+                return Ok(result.Data);
+            }
+
+            return BadRequest(result.Message);
+        }
+    }
+}
+----------------------
+Dpendency injection hatası almamak için Business katmanında DependencyInjections klasöründe Autofac klasöründe AutofacBusinessModule class'ına şu ifadeler ekleniyor.
+----------------------
+ builder.RegisterType<UserManager>().As<IUserService>();
+ builder.RegisterType<EfUserDal>().As<IUserDal>();
+ builder.RegisterType<AuthManager>().As<IAuthService>();
+ builder.RegisterType<JwtHelper>().As<ITokenHelper>();
+----------------------
+
+WebAPI katmanında program class'ında şu eklemeler yapılır. Ama önce Microsoft.AspNetCore.Authentication.JwtBearer ve Microsoft.IdentityModel.Tokens paketleri yüklenir.
+---------------------------
+builder.Services.Configure<TokenOptions>(builder.Configuration.GetSection("TokenOptions"));
+var tokenOptions = builder.Configuration.GetSection("TokenOptions").Get<TokenOptions>();
+
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidIssuer = tokenOptions.Issuer,
+            ValidAudience = tokenOptions.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = SecurityKeyHelper.CreateSecurityKey(tokenOptions.SecurityKey)
+        };
+    });
+builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory()).ConfigureContainer <ContainerBuilder>(builder =>
+{
+    builder.RegisterModule(new AutofacBusinessModule());
+});
+
+en altta app. ile başlayan yere
+app.UseAuthentication();
+ekle
+
+------------------------
+
 
 
   
