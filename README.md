@@ -1768,5 +1768,64 @@ Authmanager de userexist metodunda hata olduğundan yeni kullanıcı register ol
       return new SuccessResult();
   }
   -------------------------
+Genel bağımlılıkları yani tüm projelerde kullanacağımız bağımlılıkları (dependency injection) yapmak için Core katmanında Utilities klasöründe IoC klasörüne bir ICoreModule adında bir interface oluşturuyoruz. Aynı business katmanına oluşturduğumuz gibi buradada DependencyResolvers adında bir klasör oluşturuyoruz ve içine CoreModule adında bir class oluşturuyoruz.
+------------------------
+using Core.Utilities.IoC;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
+namespace Core.DependencyResolvers
+{
+    public class CoreModule : ICoreModule
+    {
+        public void Load(IServiceCollection serviceCollection)
+        {
+            serviceCollection.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        }
+    }
+}
+-----------------------------
+Buradaki hatanın ortadan kalkması için Microsoft.AspNetCore.Http paketinin kurulması gerekiyor
+program.cs dosyasında
+builder.Services.AddHttpContextAccessor();
+yerine hertürlü dependencyinjectionları ekleyeceğim ve içine sadece coremodule değil her tür bağımlılığı ekleyeceğim bir yapı kurmak istiyorum bunun için Core katmanında Extensions klasöründe ServiceCollectionExtensions adında bir class oluşturuyoruz. 
+------------------------
+using Core.Utilities.IoC;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Extensions
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static IServiceCollection AddDependencyResolvers(this IServiceCollection serviceCollection, ICoreModule[] modules) 
+        {
+            foreach (var module in modules)
+            { 
+            module.Load(serviceCollection);
+            }
+            return ServiceTool.Create(serviceCollection);
+
+        }
+
+    }
+}
+----------------------------
+Bu Extension'u program.cs içine ekliyoruz.
+--------------------------
+builder.Services.AddDependencyResolvers(new ICoreModule[]
+{
+    new CoreModule()
+});
+-------------------------
+Bu yapıyı zaten çalışan bir bağımlılık yapısını dahada profesyonel hale getirmek için buraya eklenen her modulü çalıştaracak bir yapı şeklinde oluşturduk
   
