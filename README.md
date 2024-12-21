@@ -1756,6 +1756,17 @@ ekle
 
 ------------------------
 
-
+Authmanager de userexist metodunda hata olduğundan yeni kullanıcı register olamıyordu onu şu şekilde değiştiriyoruz.
+-----------------------
+  public IResult UserExists(string email)
+  {
+      var result = _userService.GetByMail(email);
+      if (result.Data!=null)
+      {
+          return new ErrorResult(Messages.UserAlreadyExists);
+      }
+      return new SuccessResult();
+  }
+  -------------------------
 
   
