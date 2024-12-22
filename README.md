@@ -1770,6 +1770,22 @@ Authmanager de userexist metodunda hata olduğundan yeni kullanıcı register ol
   -------------------------
 Genel bağımlılıkları yani tüm projelerde kullanacağımız bağımlılıkları (dependency injection) yapmak için Core katmanında Utilities klasöründe IoC klasörüne bir ICoreModule adında bir interface oluşturuyoruz. Aynı business katmanına oluşturduğumuz gibi buradada DependencyResolvers adında bir klasör oluşturuyoruz ve içine CoreModule adında bir class oluşturuyoruz.
 ------------------------
+ using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Utilities.IoC
+{
+    public interface ICoreModule
+    {
+        void Load(IServiceCollection serviceCollection);     
+    }
+}
+
+  ---------------------------
 using Core.Utilities.IoC;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -1828,4 +1844,28 @@ builder.Services.AddDependencyResolvers(new ICoreModule[]
 });
 -------------------------
 Bu yapıyı zaten çalışan bir bağımlılık yapısını dahada profesyonel hale getirmek için buraya eklenen her modulü çalıştaracak bir yapı şeklinde oluşturduk
-  
+  Bu arada SQL Server Explorer'den users tablosundaki binary500 alanlarını varbinary(500) olarak değiştirerek update ediyoruz.
+  Şimdi bir Cachleme sistemi yapalım. Yani eğer herhangi bir ekleme ve güncelleme işlemi yapılmadıysa yani veritabanındaki tablolarda herhangi bir değişiklik olmadıysa çağrılan veri tabanı verilerinin veritabanına gidilmeden cache(memory) den hızlı olarak getirilmesidir. Eğer veritabanını değiştiren bir işlem yapıldıysa ekleme,güncelleme,silme bu kezde cache'den değil veritabanına gidilmesini sağlayacağız. Cachlenmek istenen veri key,value pair dediğimiz kavramlarla tutuyoruz. key dediğimiz cach'e verilen isim
+  Buna Aspect yazmadan önce Core katmanında öncelikle alt yapısını oluşturuyoruz. Bunun için öncelikle Cross Cutting Concerns klasörüne Caching adlı bir klasör oluşturuyoruz. Biz cache işlemi için AspNet'in inmemory yöntemini kullanacağız. Caching klasörü içinde öncelikle ICachManager adında bir interface oluşturulur.
+  ------------------------
+  using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.CrossCuttingConcerns.Caching
+{
+    public interface ICacheManager
+    {
+        T Get<T>(string key);
+        object Get(string key);
+        void Add(string key, object value, int duration);
+        bool IsAdd(string key);
+        void Remove(string key);
+        void RemoveByPattern(string pattern);
+
+    }
+}
+------------------------
+şimdi bu interface'in implementasyonunu yapıyoruz. Caching klasörü içine Microsoft adında bir klasör açıyoruz.ve içine MemoryCachManager adında bir class oluşturuyoruz. 
