@@ -1869,3 +1869,202 @@ namespace Core.CrossCuttingConcerns.Caching
 }
 ------------------------
 şimdi bu interface'in implementasyonunu yapıyoruz. Caching klasörü içine Microsoft adında bir klasör açıyoruz.ve içine MemoryCachManager adında bir class oluşturuyoruz. 
+-----------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using Core.Utilities.IoC;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.CrossCuttingConcerns.Caching.Microsoft
+{
+    public class MemoryCacheManager:ICacheManager
+    {
+        //Adapter Pattern
+        IMemoryCache _memoryCache;
+
+        public MemoryCacheManager()
+        {
+            _memoryCache = ServiceTool.ServiceProvider.GetService<IMemoryCache>();
+        }
+        public T Get<T>(string key)
+        {
+            return _memoryCache.Get<T>(key);
+        }
+
+        public object Get(string key)
+        {
+            return _memoryCache.Get(key);
+        }
+
+        public void Add(string key, object value, int duration)
+        {
+            _memoryCache.Set(key, value, TimeSpan.FromMinutes(duration));
+        }
+
+        public bool IsAdd(string key)
+        {
+            return _memoryCache.TryGetValue(key,out _);
+        }
+
+        public void Remove(string key)
+        {
+           _memoryCache.Remove(key);
+        }
+
+        public void RemoveByPattern(string pattern)
+        {
+            var cacheEntriesCollectionDefinition = typeof(MemoryCache).GetProperty("EntriesCollection", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var cacheEntriesCollection = cacheEntriesCollectionDefinition.GetValue(_memoryCache) as dynamic;
+            List<ICacheEntry> cacheCollectionValues = new List<ICacheEntry>();
+
+            foreach (var cacheItem in cacheEntriesCollection)
+            {
+                ICacheEntry cacheItemValue = cacheItem.GetType().GetProperty("Value").GetValue(cacheItem, null);
+                cacheCollectionValues.Add(cacheItemValue);
+            }
+
+            var regex = new Regex(pattern, RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var keysToRemove = cacheCollectionValues.Where(d => regex.IsMatch(d.Key.ToString())).Select(d => d.Key).ToList();
+
+            foreach (var key in keysToRemove)
+            {
+                _memoryCache.Remove(key);
+            }
+        }
+    }
+}
+Bunu yaptıktan sonra Core katmanında DependencyResolvers klasörü içinde oluşturmuş olduğumuz CoreModule class'ına şu eklemeyi yapıyoruz.
+----------------------
+ serviceCollection.AddMemoryCache();
+  serviceCollection.AddSingleton<ICacheManager, MemoryCacheManager>();
+  -----------------------
+  CoreModule class'ı şu şekilde olacak
+  ------------------------
+  ﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Core.CrossCuttingConcerns.Caching;
+using Core.CrossCuttingConcerns.Caching.Microsoft;
+using Core.Utilities.IoC;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.DependencyResolvers
+{
+    public class CoreModule:ICoreModule
+    {
+        public void Load(IServiceCollection serviceCollection)
+        {
+            serviceCollection.AddMemoryCache();
+            serviceCollection.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            serviceCollection.AddSingleton<ICacheManager, MemoryCacheManager>();
+        }
+    }
+}
+--------------------------
+Şimdi bunun aspectini yazıp cache işlemini bitiriyoruz. Core katmanında Aspect Klasöründe Caching adında bir klasör oluşturup içine CacheAspect isminde bir class oluşturuyoruz.
+---------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Castle.DynamicProxy;
+using Core.CrossCuttingConcerns.Caching;
+using Core.Utilities.Interceptors;
+using Core.Utilities.IoC;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Aspects.Autofac.Caching
+{
+    public class CacheAspect : MethodInterception
+    {
+        private int _duration;
+        private ICacheManager _cacheManager;
+
+        public CacheAspect(int duration = 60)
+        {
+            _duration = duration;
+            _cacheManager = ServiceTool.ServiceProvider.GetService<ICacheManager>();
+        }
+
+        public override void Intercept(IInvocation invocation)
+        {
+            var methodName = string.Format($"{invocation.Method.ReflectedType.FullName}.{invocation.Method.Name}");
+            var arguments = invocation.Arguments.ToList();
+            var key = $"{methodName}({string.Join(",", arguments.Select(x => x?.ToString() ?? "<Null>"))})";
+            if (_cacheManager.IsAdd(key))
+            {
+                invocation.ReturnValue = _cacheManager.Get(key);
+                return;
+            }
+            invocation.Proceed();
+            _cacheManager.Add(key, invocation.ReturnValue, _duration);
+        }
+    }
+}
+-----------------------
+Yine aynı klasör içine  isminde bir class daha oluşturuyoruz.
+----------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Castle.DynamicProxy;
+using Core.CrossCuttingConcerns.Caching;
+using Core.Utilities.Interceptors;
+using Core.Utilities.IoC;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Aspects.Autofac.Caching
+{
+    public class CacheRemoveAspect : MethodInterception
+    {
+        private string _pattern;
+        private ICacheManager _cacheManager;
+
+        public CacheRemoveAspect(string pattern)
+        {
+            _pattern = pattern;
+            _cacheManager = ServiceTool.ServiceProvider.GetService<ICacheManager>();
+        }
+
+        protected override void OnSuccess(IInvocation invocation)
+        {
+            _cacheManager.RemoveByPattern(_pattern);
+        }
+    }
+}
+ -------------------------
+
+ Böylece cachleme işlemi tamamlanmış oldu bunu productManager'de şu şekilde kullanıyoruz add,update ve delete CacheRemoveAspect kullanılırken listeleme işlemleri için cacheAspect kullanılır. CacheRemoveAspect uygulanırken o servisin(Burada productservice) get key'i silinir böylece eğer bir ürün ekleme,güncelleme,silme işlemleri yapıldığında listeleme işlemi cach den değil veri tabanından getirilir. şu şekilde kullanılır.
+ --------------------------
+  [SecuredOperation("product.add,Admin")]
+ [ValidationAspect(typeof(ProductValidator))]
+ [CacheRemoveAspect("IProductService.Get")]
+ public IResult Add(Product product)
+ {
+    var Toplam= _productDal.GetAll(p => p.CategoryId == product.CategoryId).Count;
+     if (Toplam >= 15)
+     {
+         return new ErrorResult();
+     }
+    
+     _productDal.Add(product);
+     return new SuccessResult(Messages.ProductAdded);
+ }
+ --------------------------
+   [CacheAspect]
+  public IDataResult<List<Product>> GetAll()
+  {
+      if (DateTime.Now.Hour==22)
+      {
+          return new ErrorDataResult<List<Product>>(Messages.MaintenanceTime);
+      }
+      return new SuccessDataResult<List<Product>>(_productDal.GetAll(),Messages.ProductsListed);
+  }
+  ------------------------
+  
