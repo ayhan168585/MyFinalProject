@@ -2067,4 +2067,53 @@ namespace Core.Aspects.Autofac.Caching
       return new SuccessDataResult<List<Product>>(_productDal.GetAll(),Messages.ProductsListed);
   }
   ------------------------
+  Şimdi transaction işlemi yapacağız. Bunun ne anlama geldiğiniz şu örnekle açıklayabiliriz. Örneğin bir para aktarım işlemi düşünelim A kişisi bir B kişisine para aktarma işlemi yaparken diyelimki 100 TL gönderecek gönderme işlemi sırasında A kişisinin hesabından 100 TL azalacak şekilde update yapılırken B kişisinin hesabıda 100 TL artacak şekilde update yapılır diyelimki A kişisinin hesabımdan 100 TL çekme işlemi başarılı oldu ama B kişisinin hesabına aktarılırken bir hata oluştu ve hesabı 100 TL artmadı. işte böyle bir durumda yapılan işlemin geri alınarak A kişisinin 100 TL si geri hesaba iade edilmelidir. işte bu işlem Transaction işlemidir. şimdi bu sistemi kuralım.
+  Bunun için Core katmanında Aspects klasöründe Autofac klasöründe Transaction adında bir klasör açılır ve içine TransactionScopeAspect adında bir class oluşturulur.
+  ------------------------
+  ﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Transactions;
+using Castle.DynamicProxy;
+using Core.Utilities.Interceptors;
+
+namespace Core.Aspects.Autofac.Transaction
+{
+    public class TransactionScopeAspect : MethodInterception
+    {
+        public override void Intercept(IInvocation invocation)
+        {
+            using (TransactionScope transactionScope = new TransactionScope())
+            {
+                try
+                {
+                    invocation.Proceed();
+                    transactionScope.Complete();
+                }
+                catch (System.Exception e)
+                {
+                    transactionScope.Dispose();
+                    throw;
+                }
+            }
+        }
+    }
+}
+---------------------------
+IProductService te transaction şu şekilde ekleme yapıyoruz.
+---------------------------
+  IResult TransactionalOperation(Product product);
+  -------------------------
+  ProductManager'e implemente ediyoruz.
+  -------------------------
+    [TransactionScopeAspect]
+        public IResult TransactionalOperation(Product product)
+        {
+            _productDal.Update(product);
+            _productDal.Add(product);
+            return new SuccessResult(Messages.ProductUpdated);
+        }
+        -----------------------
+        
+
   
