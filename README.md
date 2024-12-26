@@ -2128,6 +2128,94 @@ Controller'de şu eklemeyi yapıyoruz.
             return BadRequest(result.Message);
         }
         ------------------------
-        
+şimdi de performans aspect işlemini yapalım bunun için öncelikle core katmanında dependencyinjections klasöründe coremodule classına şu eklemeyi yapıyoruz.
+-------------------------
+ş           serviceCollection.AddSingleton<Stopwatch>();
+-------------------------
+Core katmanına Aspects klasöründe Autofac klasörüne PerformanceAspect adında bir class oluşturuyoruz.
+------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
+using Castle.DynamicProxy;
+using Core.Utilities.Interceptors;
+using Core.Utilities.IoC;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Aspects.Autofac.Performance
+{
+    public class PerformanceAspect:MethodInterception
+    {
+        private int _interval;
+        private Stopwatch _stopwatch;
+
+        public PerformanceAspect(int interval)
+        {
+            _interval = interval;
+            _stopwatch = ServiceTool.ServiceProvider.GetService<Stopwatch>();
+        }
+
+
+        protected override void OnBefore(IInvocation invocation)
+        {
+            _stopwatch.Start();
+        }
+
+        protected override void OnAfter(IInvocation invocation)
+        {
+            if (_stopwatch.Elapsed.TotalSeconds>_interval)
+            {
+                Debug.WriteLine($"Performance : {invocation.Method.DeclaringType.FullName}.{invocation.Method.Name}-->{_stopwatch.Elapsed.TotalSeconds}");
+            }
+            _stopwatch.Reset();
+        }
+    }
+}
+----------------------
+Kullanımı için kontrol edilmesini istediğiniz metodun üstüne [PerformanceAspect(5)] gibi bir kullanım yaparsanız bu şu demek bu metodun yüklenişi 5 saniyeyi aşarsa bana haber ver. Eğer bunu tüm metotları kontrol edecek şekilde Core katmanında Utilities klasöründe interceptors klasöründe AspectInterceptorSelector classında eklerseniz bütün mtotlarda prformans kontrolü yapar.
+--------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using Castle.DynamicProxy;
+using Core.Aspects.Autofac.Exception;
+using Core.CrossCuttingConcerns.Logging.Log4Net.Loggers;
+
+namespace Core.Utilities.Interceptors
+{
+    public class AspectInterceptorSelector:IInterceptorSelector
+    {
+        public IInterceptor[] SelectInterceptors(Type type, MethodInfo method, IInterceptor[] interceptors)
+        {
+            var classAttributes = type.GetCustomAttributes<MethodInterceptionBaseAttribute>
+                (true).ToList();
+            var methodAttributes = type.GetMethod(method.Name)
+                .GetCustomAttributes<MethodInterceptionBaseAttribute>(true);
+            classAttributes.AddRange(methodAttributes);
+            classAttributes.Add(new ExceptionLogAspect(typeof(FileLogger)));
+
+            return classAttributes.OrderBy(x => x.Priority).ToArray();
+        }
+    }
+}
+------------------------
+burada log işlemi eklenmiş aynı şekilde performanceAspect eklenecek.
+--------------------------
+Diğer aspectleri eklemeyi şimdilik bırakalım ve işin Frontend kısmına biraz bakalım.
+ANGULAR
+-----------------
+Anguları kurmak için öncelikle nodejs i kurmamız gerekir. nodejs.org sayfasında nodejs'i donload ediyor ve kuruyoruz. Ayrıca angular komutlarını kullanmak için ve uygulamayı yazmak için visual code 'u da kuruyoruz. Daha sonra komut istem ekranını(cmd,Powershell vb.) açıyoruz. Yada visual studio code'u açarak terminal çalıştırıyoruz. 
+npm install -g @angular/cli komutuyla angular paketlerini yüklüyoruz daha sonra angular projelerini oluşturmak için bir klasör oluşturuyoruz ve komut satırımızı o klasörün içine girecek şekilde düzenliyoruz
+C:\Users\ayhan\source\Projelerin Angular Hali>
+buradayken ng new Northwind komutuyla northwind adında angular projemizi oluşturuyoruz. cd northwind yazarak oluşturduğumuz projenin içine giriyoruz ve code . ile visual code'u bu proje dosyalarıyla beraber açıyoruz.
+
+
+
+
+
+    
 
   
