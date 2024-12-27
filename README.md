@@ -2132,7 +2132,7 @@ Controller'de şu eklemeyi yapıyoruz.
 -------------------------
 ş           serviceCollection.AddSingleton<Stopwatch>();
 -------------------------
-Core katmanına Aspects klasöründe Autofac klasörüne PerformanceAspect adında bir class oluşturuyoruz.
+Core katmanına Aspects klasöründe Autofac klasörüne performance klasörü oluşturuyoruz ve içine PerformanceAspect adında bir class oluşturuyoruz.
 ------------------------
 ﻿using System;
 using System.Collections.Generic;
@@ -2210,7 +2210,9 @@ ANGULAR
 Anguları kurmak için öncelikle nodejs i kurmamız gerekir. nodejs.org sayfasında nodejs'i donload ediyor ve kuruyoruz. Ayrıca angular komutlarını kullanmak için ve uygulamayı yazmak için visual code 'u da kuruyoruz. Daha sonra komut istem ekranını(cmd,Powershell vb.) açıyoruz. Yada visual studio code'u açarak terminal çalıştırıyoruz. 
 npm install -g @angular/cli komutuyla angular paketlerini yüklüyoruz daha sonra angular projelerini oluşturmak için bir klasör oluşturuyoruz ve komut satırımızı o klasörün içine girecek şekilde düzenliyoruz
 C:\Users\ayhan\source\Projelerin Angular Hali>
-buradayken ng new Northwind komutuyla northwind adında angular projemizi oluşturuyoruz. cd northwind yazarak oluşturduğumuz projenin içine giriyoruz ve code . ile visual code'u bu proje dosyalarıyla beraber açıyoruz.
+buradayken ng new Northwind komutuyla northwind adında angular projemizi oluşturuyoruz. cd northwind yazarak oluşturduğumuz projenin içine giriyoruz ve code . ile visual code'u bu proje dosyalarıyla beraber açıyoruz. Açılan visual code programında sol tarafta yüklü olan dosyalar görülür. package.json dosyasında Dependencies kısmında yüklü olan paketler görülür. Burada çok önemli olan kısımlardan biri node module kısmıdır. Burada angularda kullanılan paketler mevcuttur ancak kullanmak için kurmak gerekir. Ve angularda yaptığımız değişikliklerden sonra gituba gönderdiğimizde gönderilen dosyaların içinde node module kısmı bulunmaz. Bu sebeple eğer biz gitub daki bir repositoryi angulara alıp çalıştırmak istersek yapacağımız ilk şey ilgili klasör içindeyken npm install ile gerekli olan paketleri yüklemek olmalıdır. Bir diğer çok önemli klasör de src klasörüdür. src source kelimesinden gelir yani kaynak anlamına gelir ve bizim proenin bütün kaynak kodları bu klasö içinde bulunur. src klasörünün içinde bulunan app klasöründe uygulama kodları bulunur.    src klasörü içinde index.htm adında bir dosya bulunur bu sayfada bulunan  <app-root></app-root> bir komponenttir. Biz angularda componentler oluşturarak sayfaları oluşturacağız. app klasörü içine components adında bir klasör açıyoruz.  <app-root></app-root> burada görülen bu component app.component.ts'den gelir. Buradaki uzantılarına göre app.component.css app componenti ilgilendiren sayfanın tasarımını içerir. app.component.html app component sayfasını gösterir.app.component.spec.ts componentin unit test sayfasıdır. bizim için çok önemli iki dosya bir sadece ts uzantılıolan dosya ve html uzantılı olan dosyadır.    Angularda biz yazmış olduğumuz backend'i yöneterek dataların işlenmesini sağlayacağız. bunun için kullanacağımız componentlerin ts sayfasıdır.
+    
+
 
 
 
