@@ -2240,8 +2240,64 @@ import { NaviComponent } from './components/navi/navi.component';
 })
 export class AppModule { }
 -------------------------------
-oluşturulan component appmodule dosyasına importu ve declaration'u eklenir.
-    
+oluşturulan component appmodule dosyasına importu ve declaration'u eklenir. 
+Bizim birde index.html dosymız var bu index.html dosyasında component hiyerarşisini kuruyoruz.appcomponent.html ilk açılan html sayfasıdır.bu html sayfasında diğer componentleri göstermek istersek şu şekilde componentlerin selectorlerini ekleriz.
+---------------------------------
+<!-- Welcome to {{title}}
+Hello {{user}}
+<ul>
+  <li *ngFor="let product of products">{{product.productName}}</li>
+</ul> -->
+<app-navi></app-navi>
+<app-category></app-category>
+<app-product></app-product>
+<router-outlet><router-outlet>
+----------------------------------
+Şimdi üste bir navbar oluşturalım bunun için getbootstrap sayfasına gidip oradan docs kısmında components ler kısmında navbar bölümünden istediğimiz navbar'ın kodlarını kopyalıyoruz ve navi componentine gidip navi.component.html sayfasındakileri silip kopyaladığımız bu kodları yapıştırıyoruz.
+----------------------------------
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Navbar</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Link</a>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Dropdown
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#">Action</a></li>
+            <li><a class="dropdown-item" href="#">Another action</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#">Something else here</a></li>
+          </ul>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link disabled" aria-disabled="true">Disabled</a>
+        </li>
+      </ul>
+      <form class="d-flex" role="search">
+        <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+        <button class="btn btn-outline-success" type="submit">Search</button>
+      </form>
+    </div>
+  </div>
+</nav>
+-------------------------
+Ancak bunu yapıştırdığımızda sayfamız düzgün olarak görülmez.Bunun nedeni bu sayfada bulunan bootstrap css'lerinin devreye girmemesidir. Bunun için bootstrap'in install edilmesi gerekir.
+npm i bootstrap@5.3.3
+Bunu kurduktan sonra anguların configürasyon dosyası olan angular.json dosyasında styles kısmına yalnız test için olana değil ilk kısımdaki styles bölümüne
+"node_module/bootstrap/dist/bootstrap.min.css",
+bu satırı ekleyince görüntü düzeliyor ancak açılır menüler çalışmadığından styles kısmına
+
 
 
 
