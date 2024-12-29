@@ -22,6 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddCors();
 builder.Services.AddDependencyResolvers(new ICoreModule[]
 {
     new CoreModule()
@@ -67,8 +68,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseCors(builder=>builder.WithOrigins("https://localhost:4200","http://localhost:4200").AllowAnyHeader());
 
+app.UseHttpsRedirection();
 app.UseAuthentication();
 
 app.UseAuthorization();
