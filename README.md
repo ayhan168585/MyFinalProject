@@ -2296,7 +2296,194 @@ Ancak bunu yapıştırdığımızda sayfamız düzgün olarak görülmez.Bunun n
 npm i bootstrap@5.3.3
 Bunu kurduktan sonra anguların configürasyon dosyası olan angular.json dosyasında styles kısmına yalnız test için olana değil ilk kısımdaki styles bölümüne
 "node_module/bootstrap/dist/bootstrap.min.css",
-bu satırı ekleyince görüntü düzeliyor ancak açılır menüler çalışmadığından styles kısmına
+bu satırı ekleyince görüntü düzeliyor. Ancak sağ v sol taraflarda neredeyse hiç boşluk yok bunu düzeltmek app.component.html dosyasındaki herşeyi bir container içine alalım.
+-------------------------
+
+<div class="container" >
+  <app-navi></app-navi>
+  <app-category></app-category>
+  <app-product></app-product>
+
+</div>
+<router-outlet><router-outlet>
+----------------------------
+eski versiyonlarda <router-outlet><router-outlet> da <div> </div> in içine konuyordu ancak yeni versiyonlarda içine koyunca hata veriyor.
+şimdi biz şöyle bir tasarım yapmak istiyoruz. klasik e-ticaret sitelerinde olduğu gibi sol tarafta kategoriler sütunu ve ortada ürünler bulunsun. Bunun için biz satır kullanacağız 
+-----------------------------
+<div class="container">
+  <app-navi></app-navi>
+  <div class="row">
+    <div class="col-md-3">
+      <app-category></app-category>
+    </div>
+    <div class="col-md-9">
+      <app-product></app-product>
+    </div>
+  </div>
+</div>
+<router-outlet><router-outlet> 
+--------------------------
+Bunu yapınca kategoriler solda 3 birimlik ürünler ise onun yanında 9 birimlik(Sayfa toplam 12 birime ayrılır.) şekilde aynı satıra yerleşir. Şimdi de sol tarafta kategorileri gösterelim.
+Bootstrap sayfasına gidip compenents ler kısmından bir adet list group kodu alıp bu kodu category.html sayfasına yapıştırıyoruz. bunu yapınca sol tarafta kategorileri listeleyeceğimiz list-group eklenmiş oluyor.
+-------------------------
+<ul class="list-group">
+  <li class="list-group-item">An item</li>
+  <li class="list-group-item">A second item</li>
+  <li class="list-group-item">A third item</li>
+  <li class="list-group-item">A fourth item</li>
+  <li class="list-group-item">And a fifth one</li  
+</ul>
+-----------------------------
+şimdi bizim apiden gelen veriyi karşılayacak yapıyı oluşturalım ve veriler veritabanından gelsin. app kısmında sağ tıklayarak yeni bir klasör oluşturuyoruz ve adını models koyuyoruz. ve içine product.ts dosyası oluşturuyoruz.
+c# da public terimi yerine burada export kullanıyoruz.
+------------------------------
+    export interface Product {
+        productId:number
+        categoryId:number
+        productName:string
+        unitsInStock:number
+        unitPrice:number
+    }
+    ----------------------------
+    product componentimizdeki app.product.ts dosyamızda şu değişikliği yapıyoruz.
+    ---------------------------------
+    import { Component } from '@angular/core';
+import { Product } from '../../models/product';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent {
+  products: Product[] = [
+   
+  ];
+}
+-------------------------------
+models klasöründe productResponseModel.ts adında bir dosya oluşturuyoruz. Burada bana gelen datayı karşılayacak bir model oluşturuyoruz.
+------------------------------
+import { Product } from "./product";
+
+export interface ProductResponseModel{
+    data:Product[]
+    isSuccess:boolean
+    message:string
+}
+----------------------------------
+models klasörü içine bir de responseModel.ts oluşturuyoruz çünkü herseferinde isSuccess ve mesaj bilgisini göstermek istemeyebiliriz. bu sebeple yukarıdaki ProductResponseModel.ts dosyasındaki isSuccess:boolean ve message:string kısmını responseModel.ts dosyasına alıyoruz. (keserek alıyoruz.)
+-------------------------------
+export interface ResponseModel{
+    isSuccess:boolean
+    message:string
+}
+---------------------------
+ama tabi ProductResponseModel extend ediyoruz. yani şu şekle dönüşüyor.
+-----------------------------
+import { Product } from "./product";
+import { ResponseModel } from "./responseModel";
+
+export interface ProductResponseModel extends ResponseModel{
+    data:Product[]
+  
+}
+---------------------------
+şimdi product.component.ts dosyasında apiden gelen veriyi karşılamaya çalışıyoruz. apiye bağlanmak için httpClient nesnesini kullanıyoruz .Bunu kullanmak için  product.component.ts dosyasına import { HttpClient } from '@angular/common/http';
+ekliyoruz ve constructor içinde constructor(private httpClient:HttpClient){}
+tanımlamasını eklemeliyiz.
+--------------------------------
+import { Component, OnInit } from '@angular/core';
+import { Product } from '../../models/product';
+import { ProductResponseModel } from '../../models/productResponseModel';
+import { HttpClient } from '@angular/common/http';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent implements OnInit {
+  products: Product[] = [];
+  apiUrl = 'https://localhost:7206/api/products/getall';
+ 
+  constructor(private httpClient: HttpClient) {}
+
+  ngOnInit(): void {
+   this.getProducts()
+  }
+
+  getProducts() {
+    this.httpClient
+      .get<ProductResponseModel>(this.apiUrl)
+      .subscribe((response) => {
+        this.products=response.data
+      });
+  }
+}
+----------------------------
+şimdi product.component.html dosyasında eksik olan unitsInStock ekleniyor
+--------------------------
+<table class="table">
+    <tr>
+        <th>Ürün Id</th>
+        <th>Kategori Id</th>
+        <th>Ürün Adı</th>
+        <th>Fiyatı</th>
+    </tr>
+    <tr *ngFor="let product of products">
+        <td>{{product.productId}}</td>  
+        <td>{{product.categoryId}}</td>
+        <td>{{product.productName}}</td>
+        <td>{{product.unitPrice}}</td>
+        <td>{{product.unitsInStock}}</td>
+
+    </tr>
+</table>
+--------------------------
+Bunu yaptıktan sonra app.module.ts dosyasında provider kısmına provideHttpClient() ekleniyor. Daha önce HttpClientModule imports kısmına ekleniyor ve import ediliyordu ancak anguların yeni versiyonlarında bu kod kaldırılmış yerine provideHttpClient() gelmiştir.
+---------------------------
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { ProductComponent } from './components/product/product.component';
+import { CategoryComponent } from './components/category/category.component';
+import { NaviComponent } from './components/navi/navi.component';
+import { provideHttpClient } from '@angular/common/http';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    ProductComponent,
+    CategoryComponent,
+    NaviComponent
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+  ],
+  providers: [
+    provideHttpClient()
+  ],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+-----------------------------
+Bu değişiklikten sonra injection hatası kalkmış ancak XMLHttpRquest hatası vermiştir.Yani CORS hatası vermiştir.Backende gelen isteğin güvenilir bir adresten geldiğini backende bildirmemiz gerekiyor bunun için backend'de webAPI kısmında program.cs dosyasında builder.Services.AddCors(); eklemesi yapıyoruz. buradaki ekleme sırası önemli değil ama builder.Services.AddControllers(); sonrasına eklenebilir ama configuration kısmında app.UseHttpsRedirection(); kısmından öncesinde app.UseCors(builder=>builder.WithOrigins("https://localhost:4200","http://localhost:4200").AllowAnyHeader());
+eklemesini yapıyoruz.
+ 
+
+
+
+
+
+
+
 
 
 
