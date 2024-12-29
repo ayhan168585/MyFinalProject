@@ -2128,6 +2128,369 @@ Controller'de şu eklemeyi yapıyoruz.
             return BadRequest(result.Message);
         }
         ------------------------
-        
+şimdi de performans aspect işlemini yapalım bunun için öncelikle core katmanında dependencyinjections klasöründe coremodule classına şu eklemeyi yapıyoruz.
+-------------------------
+ş           serviceCollection.AddSingleton<Stopwatch>();
+-------------------------
+Core katmanına Aspects klasöründe Autofac klasörüne performance klasörü oluşturuyoruz ve içine PerformanceAspect adında bir class oluşturuyoruz.
+------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
+using Castle.DynamicProxy;
+using Core.Utilities.Interceptors;
+using Core.Utilities.IoC;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Aspects.Autofac.Performance
+{
+    public class PerformanceAspect:MethodInterception
+    {
+        private int _interval;
+        private Stopwatch _stopwatch;
+
+        public PerformanceAspect(int interval)
+        {
+            _interval = interval;
+            _stopwatch = ServiceTool.ServiceProvider.GetService<Stopwatch>();
+        }
+
+
+        protected override void OnBefore(IInvocation invocation)
+        {
+            _stopwatch.Start();
+        }
+
+        protected override void OnAfter(IInvocation invocation)
+        {
+            if (_stopwatch.Elapsed.TotalSeconds>_interval)
+            {
+                Debug.WriteLine($"Performance : {invocation.Method.DeclaringType.FullName}.{invocation.Method.Name}-->{_stopwatch.Elapsed.TotalSeconds}");
+            }
+            _stopwatch.Reset();
+        }
+    }
+}
+----------------------
+Kullanımı için kontrol edilmesini istediğiniz metodun üstüne [PerformanceAspect(5)] gibi bir kullanım yaparsanız bu şu demek bu metodun yüklenişi 5 saniyeyi aşarsa bana haber ver. Eğer bunu tüm metotları kontrol edecek şekilde Core katmanında Utilities klasöründe interceptors klasöründe AspectInterceptorSelector classında eklerseniz bütün mtotlarda prformans kontrolü yapar.
+--------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using Castle.DynamicProxy;
+using Core.Aspects.Autofac.Exception;
+using Core.CrossCuttingConcerns.Logging.Log4Net.Loggers;
+
+namespace Core.Utilities.Interceptors
+{
+    public class AspectInterceptorSelector:IInterceptorSelector
+    {
+        public IInterceptor[] SelectInterceptors(Type type, MethodInfo method, IInterceptor[] interceptors)
+        {
+            var classAttributes = type.GetCustomAttributes<MethodInterceptionBaseAttribute>
+                (true).ToList();
+            var methodAttributes = type.GetMethod(method.Name)
+                .GetCustomAttributes<MethodInterceptionBaseAttribute>(true);
+            classAttributes.AddRange(methodAttributes);
+            classAttributes.Add(new ExceptionLogAspect(typeof(FileLogger)));
+
+            return classAttributes.OrderBy(x => x.Priority).ToArray();
+        }
+    }
+}
+------------------------
+burada log işlemi eklenmiş aynı şekilde performanceAspect eklenecek.
+--------------------------
+Diğer aspectleri eklemeyi şimdilik bırakalım ve işin Frontend kısmına biraz bakalım.
+ANGULAR
+-----------------
+Anguları kurmak için öncelikle nodejs i kurmamız gerekir. nodejs.org sayfasında nodejs'i donload ediyor ve kuruyoruz. Ayrıca angular komutlarını kullanmak için ve uygulamayı yazmak için visual code 'u da kuruyoruz. Daha sonra komut istem ekranını(cmd,Powershell vb.) açıyoruz. Yada visual studio code'u açarak terminal çalıştırıyoruz. 
+npm install -g @angular/cli komutuyla angular paketlerini yüklüyoruz daha sonra angular projelerini oluşturmak için bir klasör oluşturuyoruz ve komut satırımızı o klasörün içine girecek şekilde düzenliyoruz
+C:\Users\ayhan\source\Projelerin Angular Hali>
+buradayken ng new Northwind komutuyla northwind adında angular projemizi oluşturuyoruz. cd northwind yazarak oluşturduğumuz projenin içine giriyoruz ve code . ile visual code'u bu proje dosyalarıyla beraber açıyoruz. Açılan visual code programında sol tarafta yüklü olan dosyalar görülür. package.json dosyasında Dependencies kısmında yüklü olan paketler görülür. Burada çok önemli olan kısımlardan biri node module kısmıdır. Burada angularda kullanılan paketler mevcuttur ancak kullanmak için kurmak gerekir. Ve angularda yaptığımız değişikliklerden sonra gituba gönderdiğimizde gönderilen dosyaların içinde node module kısmı bulunmaz. Bu sebeple eğer biz gitub daki bir repositoryi angulara alıp çalıştırmak istersek yapacağımız ilk şey ilgili klasör içindeyken npm install ile gerekli olan paketleri yüklemek olmalıdır. Bir diğer çok önemli klasör de src klasörüdür. src source kelimesinden gelir yani kaynak anlamına gelir ve bizim proenin bütün kaynak kodları bu klasö içinde bulunur. src klasörünün içinde bulunan app klasöründe uygulama kodları bulunur.    src klasörü içinde index.htm adında bir dosya bulunur bu sayfada bulunan  <app-root></app-root> bir komponenttir. Biz angularda componentler oluşturarak sayfaları oluşturacağız. app klasörü içine components adında bir klasör açıyoruz.  <app-root></app-root> burada görülen bu component app.component.ts'den gelir. Buradaki uzantılarına göre app.component.css app componenti ilgilendiren sayfanın tasarımını içerir. app.component.html app component sayfasını gösterir.app.component.spec.ts componentin unit test sayfasıdır. bizim için çok önemli iki dosya bir sadece ts uzantılıolan dosya ve html uzantılı olan dosyadır.    Angularda biz yazmış olduğumuz backend'i yöneterek dataların işlenmesini sağlayacağız. bunun için kullanacağımız componentlerin ts sayfasıdır. Yeni bri component oluşturmak için components klasörüne sağ tıklıyoruz ve orada open in integrated terminal'e tıklıyoruz bunu yapınca komut satırımız bunun içine girecek şekilde düzenlenir.
+ng g component product komutu ile product componenti oluşturulur. aynı şekilde category ve navi componentlerini de oluşturuyoruz. navi componenti sayfanın üstünde bulunan menü çubuğu
+Biz bir component oluşturduğumuzda appmodule dosyasında eklenir. Ancak Anguların yeni versiyonlarında appmodule dosyası oluşmaz. eğer oluşmasını istersek yeni proje oluşturuken
+ ng new --no-standalone projeadı komutu ile proje oluştururuz. Böylece appmodule oluşur. Componentlerimizi oluşturduktan sonra appmodule dosyasına şu şekilde ekleme yapılır.
+ -------------------------------
+ import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { ProductComponent } from './components/product/product.component';
+import { CategoryComponent } from './components/category/category.component';
+import { NaviComponent } from './components/navi/navi.component';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    ProductComponent,
+    CategoryComponent,
+    NaviComponent
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule
+  ],
+  providers: [],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+-------------------------------
+oluşturulan component appmodule dosyasına importu ve declaration'u eklenir. 
+Bizim birde index.html dosymız var bu index.html dosyasında component hiyerarşisini kuruyoruz.appcomponent.html ilk açılan html sayfasıdır.bu html sayfasında diğer componentleri göstermek istersek şu şekilde componentlerin selectorlerini ekleriz.
+---------------------------------
+<!-- Welcome to {{title}}
+Hello {{user}}
+<ul>
+  <li *ngFor="let product of products">{{product.productName}}</li>
+</ul> -->
+<app-navi></app-navi>
+<app-category></app-category>
+<app-product></app-product>
+<router-outlet><router-outlet>
+----------------------------------
+Şimdi üste bir navbar oluşturalım bunun için getbootstrap sayfasına gidip oradan docs kısmında components ler kısmında navbar bölümünden istediğimiz navbar'ın kodlarını kopyalıyoruz ve navi componentine gidip navi.component.html sayfasındakileri silip kopyaladığımız bu kodları yapıştırıyoruz.
+----------------------------------
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Navbar</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Link</a>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Dropdown
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#">Action</a></li>
+            <li><a class="dropdown-item" href="#">Another action</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#">Something else here</a></li>
+          </ul>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link disabled" aria-disabled="true">Disabled</a>
+        </li>
+      </ul>
+      <form class="d-flex" role="search">
+        <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+        <button class="btn btn-outline-success" type="submit">Search</button>
+      </form>
+    </div>
+  </div>
+</nav>
+-------------------------
+Ancak bunu yapıştırdığımızda sayfamız düzgün olarak görülmez.Bunun nedeni bu sayfada bulunan bootstrap css'lerinin devreye girmemesidir. Bunun için bootstrap'in install edilmesi gerekir.
+npm i bootstrap@5.3.3
+Bunu kurduktan sonra anguların configürasyon dosyası olan angular.json dosyasında styles kısmına yalnız test için olana değil ilk kısımdaki styles bölümüne
+"node_module/bootstrap/dist/bootstrap.min.css",
+bu satırı ekleyince görüntü düzeliyor. Ancak sağ v sol taraflarda neredeyse hiç boşluk yok bunu düzeltmek app.component.html dosyasındaki herşeyi bir container içine alalım.
+-------------------------
+
+<div class="container" >
+  <app-navi></app-navi>
+  <app-category></app-category>
+  <app-product></app-product>
+
+</div>
+<router-outlet><router-outlet>
+----------------------------
+eski versiyonlarda <router-outlet><router-outlet> da <div> </div> in içine konuyordu ancak yeni versiyonlarda içine koyunca hata veriyor.
+şimdi biz şöyle bir tasarım yapmak istiyoruz. klasik e-ticaret sitelerinde olduğu gibi sol tarafta kategoriler sütunu ve ortada ürünler bulunsun. Bunun için biz satır kullanacağız 
+-----------------------------
+<div class="container">
+  <app-navi></app-navi>
+  <div class="row">
+    <div class="col-md-3">
+      <app-category></app-category>
+    </div>
+    <div class="col-md-9">
+      <app-product></app-product>
+    </div>
+  </div>
+</div>
+<router-outlet><router-outlet> 
+--------------------------
+Bunu yapınca kategoriler solda 3 birimlik ürünler ise onun yanında 9 birimlik(Sayfa toplam 12 birime ayrılır.) şekilde aynı satıra yerleşir. Şimdi de sol tarafta kategorileri gösterelim.
+Bootstrap sayfasına gidip compenents ler kısmından bir adet list group kodu alıp bu kodu category.html sayfasına yapıştırıyoruz. bunu yapınca sol tarafta kategorileri listeleyeceğimiz list-group eklenmiş oluyor.
+-------------------------
+<ul class="list-group">
+  <li class="list-group-item">An item</li>
+  <li class="list-group-item">A second item</li>
+  <li class="list-group-item">A third item</li>
+  <li class="list-group-item">A fourth item</li>
+  <li class="list-group-item">And a fifth one</li  
+</ul>
+-----------------------------
+şimdi bizim apiden gelen veriyi karşılayacak yapıyı oluşturalım ve veriler veritabanından gelsin. app kısmında sağ tıklayarak yeni bir klasör oluşturuyoruz ve adını models koyuyoruz. ve içine product.ts dosyası oluşturuyoruz.
+c# da public terimi yerine burada export kullanıyoruz.
+------------------------------
+    export interface Product {
+        productId:number
+        categoryId:number
+        productName:string
+        unitsInStock:number
+        unitPrice:number
+    }
+    ----------------------------
+    product componentimizdeki app.product.ts dosyamızda şu değişikliği yapıyoruz.
+    ---------------------------------
+    import { Component } from '@angular/core';
+import { Product } from '../../models/product';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent {
+  products: Product[] = [
+   
+  ];
+}
+-------------------------------
+models klasöründe productResponseModel.ts adında bir dosya oluşturuyoruz. Burada bana gelen datayı karşılayacak bir model oluşturuyoruz.
+------------------------------
+import { Product } from "./product";
+
+export interface ProductResponseModel{
+    data:Product[]
+    isSuccess:boolean
+    message:string
+}
+----------------------------------
+models klasörü içine bir de responseModel.ts oluşturuyoruz çünkü herseferinde isSuccess ve mesaj bilgisini göstermek istemeyebiliriz. bu sebeple yukarıdaki ProductResponseModel.ts dosyasındaki isSuccess:boolean ve message:string kısmını responseModel.ts dosyasına alıyoruz. (keserek alıyoruz.)
+-------------------------------
+export interface ResponseModel{
+    isSuccess:boolean
+    message:string
+}
+---------------------------
+ama tabi ProductResponseModel extend ediyoruz. yani şu şekle dönüşüyor.
+-----------------------------
+import { Product } from "./product";
+import { ResponseModel } from "./responseModel";
+
+export interface ProductResponseModel extends ResponseModel{
+    data:Product[]
+  
+}
+---------------------------
+şimdi product.component.ts dosyasında apiden gelen veriyi karşılamaya çalışıyoruz. apiye bağlanmak için httpClient nesnesini kullanıyoruz .Bunu kullanmak için  product.component.ts dosyasına import { HttpClient } from '@angular/common/http';
+ekliyoruz ve constructor içinde constructor(private httpClient:HttpClient){}
+tanımlamasını eklemeliyiz.
+--------------------------------
+import { Component, OnInit } from '@angular/core';
+import { Product } from '../../models/product';
+import { ProductResponseModel } from '../../models/productResponseModel';
+import { HttpClient } from '@angular/common/http';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent implements OnInit {
+  products: Product[] = [];
+  apiUrl = 'https://localhost:7206/api/products/getall';
+ 
+  constructor(private httpClient: HttpClient) {}
+
+  ngOnInit(): void {
+   this.getProducts()
+  }
+
+  getProducts() {
+    this.httpClient
+      .get<ProductResponseModel>(this.apiUrl)
+      .subscribe((response) => {
+        this.products=response.data
+      });
+  }
+}
+----------------------------
+şimdi product.component.html dosyasında eksik olan unitsInStock ekleniyor
+--------------------------
+<table class="table">
+    <tr>
+        <th>Ürün Id</th>
+        <th>Kategori Id</th>
+        <th>Ürün Adı</th>
+        <th>Fiyatı</th>
+    </tr>
+    <tr *ngFor="let product of products">
+        <td>{{product.productId}}</td>  
+        <td>{{product.categoryId}}</td>
+        <td>{{product.productName}}</td>
+        <td>{{product.unitPrice}}</td>
+        <td>{{product.unitsInStock}}</td>
+
+    </tr>
+</table>
+--------------------------
+Bunu yaptıktan sonra app.module.ts dosyasında provider kısmına provideHttpClient() ekleniyor. Daha önce HttpClientModule imports kısmına ekleniyor ve import ediliyordu ancak anguların yeni versiyonlarında bu kod kaldırılmış yerine provideHttpClient() gelmiştir.
+---------------------------
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { ProductComponent } from './components/product/product.component';
+import { CategoryComponent } from './components/category/category.component';
+import { NaviComponent } from './components/navi/navi.component';
+import { provideHttpClient } from '@angular/common/http';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    ProductComponent,
+    CategoryComponent,
+    NaviComponent
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+  ],
+  providers: [
+    provideHttpClient()
+  ],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+-----------------------------
+Bu değişiklikten sonra injection hatası kalkmış ancak XMLHttpRquest hatası vermiştir.Yani CORS hatası vermiştir.Backende gelen isteğin güvenilir bir adresten geldiğini backende bildirmemiz gerekiyor bunun için backend'de webAPI kısmında program.cs dosyasında builder.Services.AddCors(); eklemesi yapıyoruz. buradaki ekleme sırası önemli değil ama builder.Services.AddControllers(); sonrasına eklenebilir ama configuration kısmında app.UseHttpsRedirection(); kısmından öncesinde app.UseCors(builder=>builder.WithOrigins("https://localhost:4200","http://localhost:4200").AllowAnyHeader());
+eklemesini yapıyoruz.
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
   
