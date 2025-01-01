@@ -2476,6 +2476,65 @@ export class AppModule { }
 -----------------------------
 Bu değişiklikten sonra injection hatası kalkmış ancak XMLHttpRquest hatası vermiştir.Yani CORS hatası vermiştir.Backende gelen isteğin güvenilir bir adresten geldiğini backende bildirmemiz gerekiyor bunun için backend'de webAPI kısmında program.cs dosyasında builder.Services.AddCors(); eklemesi yapıyoruz. buradaki ekleme sırası önemli değil ama builder.Services.AddControllers(); sonrasına eklenebilir ama configuration kısmında app.UseHttpsRedirection(); kısmından öncesinde app.UseCors(builder=>builder.WithOrigins("https://localhost:4200","http://localhost:4200").AllowAnyHeader());
 eklemesini yapıyoruz.
+----------------------------
+Biz bunu servis ekleyerek oluşturacağız. app katmanında sağ tıklıyor ve services adında bir klasör oluşturuyoruz. oluşturduğumuz services klasörüne sağ tıklıyoruz ve open integrated terminali seçerek o kısma giriyoruz ve ng g service product ile product servisini oluşturuyoruz. componentteki product.ts dosyasından bazı verileri alarak product.service.ts dosyasına geçiriyoruz. ve product.service.ts dosyası şu şekilde oluyor.
+---------------------------
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { ProductResponseModel } from '../models/productResponseModel';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ProductService {
+  apiUrl = 'https://localhost:7206/api/products/getall';
+
+
+  constructor(private httpClient: HttpClient) { }
+
+   getProducts():Observable<ProductResponseModel> {
+     return this.httpClient.get<ProductResponseModel>(this.apiUrl);
+       
+        }
+    }
+
+-------------------------
+app.product.component.ts dosyası şu şekilde oluyor.
+-------------------------
+import { Component, OnInit } from '@angular/core';
+import { Product } from '../../models/product';
+import { ProductResponseModel } from '../../models/productResponseModel';
+import { ProductService } from '../../services/product.service';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent implements OnInit {
+  products: Product[] = [];
+  dataLoaded=false
+ 
+  constructor(private productService:ProductService) {}
+
+  ngOnInit(): void {
+   this.getProducts()
+  }
+
+  getProducts() {
+   this.productService.getProducts().subscribe(response=>{
+    this.products=response.data;
+    this.dataLoaded=true
+
+   })
+  }
+}
+--------------------------------
+böylece kodlarımızı refakte etmiş oluyoruz.
+--------------------------------
  
 
 
