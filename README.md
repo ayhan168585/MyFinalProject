@@ -2535,7 +2535,73 @@ export class ProductComponent implements OnInit {
 --------------------------------
 böylece kodlarımızı refakte etmiş oluyoruz.
 --------------------------------
+Ama RsponseModel kısmında biraz daha refaktör yapalım. models kısmına sağ tıklıyoruz ve listResponseModel.ts adında bir dosya oluşturuyoruz.
+------------------------------
+import { ResponseModel } from "./responseModel";
+
+export interface ListResponseModel<T>{
+data:T[]
+}
+------------------------
+Biz bunu yapınca artık ProductResponseModel ve ResponseModel'e grek kalmadı bu yüzden onları siliyoruz. Ve bundan sonraki entities lerde bu listResponseModel'i kullanacağız.
+tabi bunu yapınca product.component.ts ve product.service.ts dosyaları hata verecek çünkü onlara daha önce kullanılan PrdouctResponseModel ve ResponseModel bulunmakta dolayısıyla onları şu şekilde değiştiriyoruz.
+---------------------------
+product.service.ts dosyası
+----------------------------
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { ListResponseModel } from '../models/listResponseModel';
+import { Product } from '../models/product';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ProductService {
+  apiUrl = 'https://localhost:7206/api/products/getall';
+
+
+  constructor(private httpClient: HttpClient) { }
+
+   getProducts():Observable<ListResponseModel<Product>> {
+     return this.httpClient.get<ListResponseModel<Product>>(this.apiUrl);
+       
+        }
+    }
+
+-------------------------
+product.componnt.ts dosyası
+--------------------------
+import { Component, OnInit } from '@angular/core';
+import { Product } from '../../models/product';
+import { ProductService } from '../../services/product.service';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent implements OnInit {
+  products: Product[] = [];
+  dataLoaded=false
  
+  constructor(private productService:ProductService) {}
+
+  ngOnInit(): void {
+   this.getProducts()
+  }
+
+  getProducts() {
+   this.productService.getProducts().subscribe(response=>{
+    this.products=response.data;
+    this.dataLoaded=true
+
+   })
+  }
+}
+-----------------------
 
 
 
