@@ -2731,6 +2731,97 @@ backend de bunu yapmışken şunuda ekleyelim.
 Backendde bu değişikliği yaptıktan sonra angulara geçiyoruz ve product.service.ts dosyasında 
 öncelikle api adresinde bir değişiklik yapıyoruz. ve her türlü durumda kullanılan api adresine çeviriyoruz.
 -----------------------
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { ListResponseModel } from '../models/listResponseModel';
+import { Product } from '../models/product';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ProductService {
+  apiUrl = 'https://localhost:7206/api/';
+
+
+  constructor(private httpClient: HttpClient) { }
+
+   getProducts():Observable<ListResponseModel<Product>> {
+    let newPath=this.apiUrl+"products/getall"
+     return this.httpClient.get<ListResponseModel<Product>>(newPath);
+       
+        }
+        getProductsByCategory(categoryId:number):Observable<ListResponseModel<Product>>{
+          let newPath=this.apiUrl+"products/getallbycategoryid?categoryId="+categoryId
+          return this.httpClient.get<ListResponseModel<Product>>(newPath)
+        }
+    }
+
+---------------------------
+product.component.ts dosyası şu şekilde düzenleniyor.
+----------------------------
+import { Component, OnInit } from '@angular/core';
+import { Product } from '../../models/product';
+import { ProductService } from '../../services/product.service';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent implements OnInit {
+  products: Product[] = [];
+  dataLoaded=false
+ 
+  constructor(private productService:ProductService,private activatedRoute:ActivatedRoute) {}
+
+  ngOnInit(): void {
+  this.activatedRoute.params.subscribe(params=>{
+    if(params["categoryId"]){
+      this.getProductsByCategory(params["categoryId"])
+    }else{
+      this.getProducts()
+    }
+  })
+  }
+
+  getProducts() {
+   this.productService.getProducts().subscribe(response=>{
+    this.products=response.data;
+    this.dataLoaded=true
+
+   })
+  }
+  getProductsByCategory(categoryId:number){
+    this.productService.getProductsByCategory(categoryId).subscribe(response=>{
+      this.products=response.data
+      this.dataLoaded=true
+    })
+  }
+}
+--------------------------
+app.routing.module.ts dosyası da şu şekilde oluyor.
+--------------------------
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { ProductComponent } from './components/product/product.component';
+
+const routes: Routes = [
+  {path:"",pathMatch:"full",component:ProductComponent},
+  {path:"products",component:ProductComponent},
+  {path:"products/category/:categoryId",component:ProductComponent}
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule]
+})
+export class AppRoutingModule { }
+-------------------------
+Böylece solda seçilen kategori ne ise o kategoriden olan ürünler ekrana gelir.
 
 
 
