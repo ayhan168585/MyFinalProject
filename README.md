@@ -2635,6 +2635,67 @@ const routes: Routes = [
 })
 export class AppRoutingModule { }
 --------------------------------
+şimdi sol tarafta seçim yapılan kategoriye göre ürünlerin gösterilmesi işlemini yapalım.
+-----------------------------
+category.component.ts dosyasında seçilen kategoriyi belirleyen ve onu tutan iki tane fonksiyon oluşturuyoruz.
+----------------------------
+import { Component, OnInit } from '@angular/core';
+import { CategoryService } from '../../services/category.service';
+import { Category } from '../../models/category';
+
+@Component({
+  selector: 'app-category',
+  standalone: false,
+  
+  templateUrl: './category.component.html',
+  styleUrl: './category.component.css'
+})
+export class CategoryComponent implements OnInit {
+  categories:Category[]=[]
+  constructor(private categoryService:CategoryService){}
+  currentCategory:Category
+  // currentCategory:Category şeklinde kullanmak için tesconfig.json dosyasına "strict":"true"'den sonra
+  // "strictPropertyInitialization": false, eklemesi yapılır. 
+
+  
+  ngOnInit(): void {
+this.getCategories()
+  }
+  getCategories(){
+this.categoryService.getCategories().subscribe(response=>{
+  this.categories=response.data
+})
+  }
+  setCurrentCategory(category:Category){
+   this.currentCategory=category
+  }
+
+  getCurrentCategoryClass(category:Category){
+   if(category==this.currentCategory){
+    return "list-group-item active"
+   }
+   else{
+    return "list-group-item"
+   }
+  }
+
+
+}
+---------------------------
+ currentCategory:Category
+  // currentCategory:Category şeklinde kullanmak için tesconfig.json dosyasına "strict":"true"'den sonra
+  // "strictPropertyInitialization": false, eklemesi yapılır.  Yada 
+    currentCategory:Category={categoryId:0,categoryName:""} şeklinde ilk değeri veriyoruz. ancak bunu yapınca ilk değer boşta olsa verildiğinden dolayı birşey seçili olmasa da seçtiniz yazısı görünür.  category.component.html dosyasını da şu şekilde oluşturuyoruz. bu sebeple  currentCategory:Category şeklinde kullanıyoruz ve  <h5 *ngIf="currentCategory">{{currentCategory.categoryName}} seçtiniz</h5> seçildiği anda bu <h5>'i göster diyoruz.
+---------------------------
+<ul class="list-group">
+    <li (click)="setCurrentCategory(category)" *ngFor="let category of categories
+    " [class]="getCurrentCategoryClass(category)">{{category.categoryName}}</li>
+   
+  </ul>
+  <h5 *ngIf="currentCategory">{{currentCategory.categoryName}} seçtiniz</h5>
+  --------------------------
+  Bu kodlarla birlikte seçildiğinde rengi maviye döner ve aşağıda hangi kategoriyi seçtiğimiz yazılır.
+  ----------------------------
 
 
 
