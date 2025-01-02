@@ -2696,6 +2696,42 @@ this.categoryService.getCategories().subscribe(response=>{
   --------------------------
   Bu kodlarla birlikte seçildiğinde rengi maviye döner ve aşağıda hangi kategoriyi seçtiğimiz yazılır.
   ----------------------------
+  şimdi seçilen kategoriye göre ürünleri getirelim öncelikle routing olarak şu root' u ekliyoruz
+  --------------------------
+    {path:"products/category/:categoryId",component:ProductComponent}
+---------------------------
+öncelikle backende seçilen kategoriye göre ürünleri getirmeyi controllerde  eklemek gerekir.
+--------------------------
+backendde şu eklemeyi yapıyoruz.
+---------------------------
+  [HttpGet("getallBycategoryid")]
+  public IActionResult GetAllByCategoryId(int id)
+  {
+      var result = _productService.GetAllByCategoryId(id);
+      if (result.IsSuccess)
+      {
+          return Ok(result);
+      }
+      return BadRequest(result);
+  }
+  -------------------------
+backend de bunu yapmışken şunuda ekleyelim.
+----------------------------
+ [HttpGet("getproductdetails")]
+ public IActionResult GetProductDetails()
+ {
+     var result = _productService.GetProductDetails();
+     if (result.IsSuccess)
+     {
+         return Ok(result);
+     }
+     return BadRequest(result);
+ }
+ ------------------------
+Backendde bu değişikliği yaptıktan sonra angulara geçiyoruz ve product.service.ts dosyasında 
+öncelikle api adresinde bir değişiklik yapıyoruz. ve her türlü durumda kullanılan api adresine çeviriyoruz.
+-----------------------
+
 
 
 
