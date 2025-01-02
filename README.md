@@ -2602,6 +2602,40 @@ export class ProductComponent implements OnInit {
   }
 }
 -----------------------
+ANGULAR-ROUTİNG
+Bu işlem bittikten sonra şimdi rooting olayı üzerinde duralım. program çalıştığında ilk çalışan html sayfası app.component.html sayfasıdır. orada sol tarafta kategoriler üstte navigasyon çubuğu bulunur orta kısım ise sürekli değişecek yerdir. o bölüme       <router-outlet></router-outlet> ifadesini koyuyoruz.
+-----------------------
+<div class="container">
+  <app-navi></app-navi>
+  <div class="row">
+    <div class="col-md-3">
+      <app-category></app-category>
+    </div>
+    <div class="col-md-9">
+      <router-outlet></router-outlet>
+
+    </div>
+  </div>
+</div>
+---------------------------
+burada hangi sayfanın gösterileceği app.routing.module.ts dosyasındaki rooting kodları belirleyecek const routes dizisindeki rout ifadeleri routing işlemini oluşturacak.
+--------------------------
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { ProductComponent } from './components/product/product.component';
+
+const routes: Routes = [
+  {path:"",pathMatch:"full",component:ProductComponent},
+  {path:"products",component:ProductComponent}
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule]
+})
+export class AppRoutingModule { }
+--------------------------------
+
 
 
 
