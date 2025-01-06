@@ -2829,8 +2829,18 @@ Böylece solda seçilen kategori ne ise o kategoriden olan ürünler ekrana geli
                "./node_modules/jquery/dist/jquery.min.js"
             ]
             -----------------------
-eklemesi yapıyoruz.
-
+eklemesi yapıyoruz. Ama angular 18 de çalışmadı. Yeni versiyon angularda çalışması için 
+---------------------------
+ "styles": [
+              "./node_modules/bootstrap/dist/css/bootstrap.min.css",
+             
+              "src/styles.css"
+            ],
+            "scripts": [
+              "./node_modules/@popperjs/core/dist/umd/popper.min.js",
+               "./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
+---------------------------
+eklenmesi gerekiyor.
 
 
 
