@@ -2822,6 +2822,14 @@ const routes: Routes = [
 export class AppRoutingModule { }
 -------------------------
 Böylece solda seçilen kategori ne ise o kategoriden olan ürünler ekrana gelir.
+Şimdi çalışmayan Dropdon menüsünü çalıştıralım. Öncelikle npm install jquery diyerek jquery paketini yüklüyoruz. Daha sonra aktif hale getirmek için angular.json dosyasında ilk scripts[] alanına
+-------------------------
+ "scripts": [
+               "./node_modules/bootstrap/dist/js/bootstrap.min.js",
+               "./node_modules/jquery/dist/jquery.min.js"
+            ]
+            -----------------------
+eklemesi yapıyoruz.
 
 
 
