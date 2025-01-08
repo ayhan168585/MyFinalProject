@@ -2892,6 +2892,112 @@ kullanımı da şu şekilde olacak
 </table>
 ----------------------------
 
+Şimdi bir pipe daha yazacağız ve bu pipe'in görevi ürün araması yapmak olacak Bootstrap sayfasından Forms menüsünden Form-Control kısmından
+--------------------------
+<div class="mb-3">
+  <label for="exampleFormControlInput1" class="form-label">Email address</label>
+  <input type="email" class="form-control" id="exampleFormControlInput1" placeholder="name@example.com">
+</div>
+--------------------------
+kısmı kopyalıyoruz. product.component.html dosyasında table'in üstüne yapıştırıyoruz. ama önce şu şekilde değişiklikler yapıyoruz type'ini emailden Text'e çeviriyoruz ve id'sini filterText olarak değiştiriyoruz. ve Label kısmını da Ürün ara Place holder kısmını ürün adı yaz şeklinde değişitiriyoruz.
+
+-------------------------
+ <div class="mb-3">
+    <label for="filterText" class="form-label">Ürün Ara</label>
+    <input type="text" class="form-control" id="filterText" placeholder="Ürün adı yaz">
+  </div>
+  <div>
+    Burada ise şu ürünü aradınız şeklinde bir uyarı göstereceğiz.
+  </div>
+------------------------
+Bunu yapabilmek için daha doğrusu angular da bir data kullanacaksak bunu önce component.ts dosyasında tanımlamamız gerekir.
+------------------------
+import { Component, OnInit } from '@angular/core';
+import { Product } from '../../models/product';
+import { ProductService } from '../../services/product.service';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent implements OnInit {
+  products: Product[] = [];
+  dataLoaded=false
+  filterText=""
+ 
+  constructor(private productService:ProductService,private activatedRoute:ActivatedRoute) {}
+
+  ngOnInit(): void {
+  this.activatedRoute.params.subscribe(params=>{
+    if(params["categoryId"]){
+      this.getProductsByCategory(params["categoryId"])
+    }else{
+      this.getProducts()
+    }
+  })
+  }
+
+  getProducts() {
+   this.productService.getProducts().subscribe(response=>{
+    this.products=response.data;
+    this.dataLoaded=true
+
+   })
+  }
+  getProductsByCategory(categoryId:number){
+    this.productService.getProductsByCategory(categoryId).subscribe(response=>{
+      this.products=response.data
+      this.dataLoaded=true
+    })
+  }
+}
+--------------------------
+ama buradaki filterText ile html dosyasındaki filterText'i birbiriyle ilişkilendirmek gerekir bunu yapmak için html dosyasında [(ngModel)] notasyonu kullanılır
+-------------------------
+ <div class="mb-3">
+    <label for="filterText" class="form-label">Ürün Ara</label>
+    <input  type="text"  [(ngModel)]="filterText" class="form-control" id="filterText" placeholder="Ürün adı yaz">
+  </div>
+  ---------------------------
+  ama anguların yeni versiyonlarında bunun kullanılabilmesi için app.module.ts dosyasına FormsModule modulünün eklenmesi gerekir.
+  ---------------------------
+  import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { ProductComponent } from './components/product/product.component';
+import { CategoryComponent } from './components/category/category.component';
+import { NaviComponent } from './components/navi/navi.component';
+import { provideHttpClient } from '@angular/common/http';
+import { VatAddedPipe } from './pipes/vat-added.pipe';
+import { FormsModule } from '@angular/forms';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    ProductComponent,
+    CategoryComponent,
+    NaviComponent,
+    VatAddedPipe
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    FormsModule
+  ],
+  providers: [
+    provideHttpClient()
+  ],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+------------------------
+
 
 
 
