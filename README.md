@@ -2848,7 +2848,49 @@ app klasörü içine pipes adında yeni bir klasör oluşturuyoruz.pipe klasör�
 -----------------------
 <td>{{ product.productName | uppercase }}</td>
 -----------------------
-şeklinde kullanılır.
+şeklinde kullanılır. Ama biz kendimiz bir tane pipe oluşturalım mesela biza api'den KDV'li fiyat gelmiyor biz bir pipe vasıtası ile ürünün KDV'li fiyatını hesaplayıp ekranda gösterelim.daha önce oluşturduğumuz vatAdded pipe'inde bu hesaplamayı yapacak kodu yazacağız.
+---------------------------
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'vatAdded',
+  standalone: false
+})
+export class VatAddedPipe implements PipeTransform {
+
+  transform(value: number, rate: number): number {
+    return value + (value*rate/100);
+  }
+
+}
+-------------------------
+kullanımı da şu şekilde olacak
+----------------------------
+<div *ngIf="dataLoaded==false" class="spinner-border" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+<table *ngIf="dataLoaded==true" class="table">
+  <thead>
+    <tr>
+      <th>Ürün Id</th>
+      <th>Kategori Id</th>
+      <th>Ürün Adı</th>
+      <th>Fiyatı</th>
+      <th>Kdv'li Fiyat</th>
+      <th>Stok Sayısı</th>
+    </tr>
+  </thead>
+
+  <tr *ngFor="let product of products">
+    <td>{{ product.productId }}</td>
+    <td>{{ product.categoryId }}</td>
+    <td>{{ product.productName | titlecase }}</td>
+    <td>{{ product.unitPrice | currency:"TRY":"TL ":""}}</td>
+    <td>{{ product.unitPrice | vatAdded:18 | currency}}</td>
+    <td>{{ product.unitsInStock }}</td>
+  </tr>
+</table>
+----------------------------
 
 
 
