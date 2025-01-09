@@ -2842,7 +2842,7 @@ eklemesi yapıyoruz. Ama angular 18 de çalışmadı. Yeni versiyon angularda ç
 ---------------------------
 eklenmesi gerekiyor. Şimdi elimizdeki datayı farklı bir şekilde göstermek için PIPE konusuna değineceğiz
 
-PIPE(Burada kaldık)
+PIPE
 ------------------
 app klasörü içine pipes adında yeni bir klasör oluşturuyoruz.pipe klasörü üzerindeyken open in integrated terminal diyerek pipe klasörü içine giriyoruz. ng g pipe vatAdded adında yeni bir pipe oluşturuyoruz. Bu yazacağımız custom bir pipe olacak bunun yanında angular içinde hazır olarak kullanılan built-in pipeler de mevcuttur. Pipeler datayı farklı göstermek istediğimiz html dosyalarında kullanılır. component klasöründ product.component.html dosyasında şu şekilde kullanıyoruz. mesela product isimlerini büyük harfle göstermek istersek
 -----------------------
@@ -2997,7 +2997,7 @@ import { FormsModule } from '@angular/forms';
 })
 export class AppModule { }
 ------------------------
-
+(Burada kaldık)
 
 
 
