@@ -2997,7 +2997,7 @@ import { FormsModule } from '@angular/forms';
 })
 export class AppModule { }
 ------------------------
-(Burada kaldık)
+
 
 Bu işlem sadece basitçe arama kutusuna yazılan yazının alttaki form kutusunda gösterilmesini sağlar oysa bizim yapmak istediğimiz üstteki arama kutusuna ürün ismi yazdığımızda o isimdeki ürün yada ürünlerin getirilmesidir. Bun yapmak için bir pipe daha yazacağız bu pipe'in ismini filterPipe olarak koyuyoruz. burada value olarak yani değiştirilemsi istenen değer olarak Product listesidir. değiştirilen değer ise yazılan string olduğundan string dir. Bu tür arama işlemlerinde öncelikle aranacak veriyi ya büyük harfe yada küçük harfe çevirmek olmalıdır bunu yapmazsak yazılan büyük yada küçük harfe göre aramanın etkilenmesidir çünkü javascript büyük küçük harf duyarlıdır. bu pipe üzerinede java script kodu yazacağız javascriptin filter özelliğinden yararlanacağız. Kodumuz şu şekilde olacak.
 --------------------------
@@ -3052,6 +3052,8 @@ Bunu peki nerede kullanacağız burada değiştirilmek istenen product listesi o
     <td>{{ product.unitsInStock }}</td>
   </tr>
 </table>
+------------------------
+(Burada kaldık)
 
 
 
