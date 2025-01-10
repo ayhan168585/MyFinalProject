@@ -2999,6 +2999,62 @@ export class AppModule { }
 ------------------------
 (Burada kaldık)
 
+Bu işlem sadece basitçe arama kutusuna yazılan yazının alttaki form kutusunda gösterilmesini sağlar oysa bizim yapmak istediğimiz üstteki arama kutusuna ürün ismi yazdığımızda o isimdeki ürün yada ürünlerin getirilmesidir. Bun yapmak için bir pipe daha yazacağız bu pipe'in ismini filterPipe olarak koyuyoruz. burada value olarak yani değiştirilemsi istenen değer olarak Product listesidir. değiştirilen değer ise yazılan string olduğundan string dir. Bu tür arama işlemlerinde öncelikle aranacak veriyi ya büyük harfe yada küçük harfe çevirmek olmalıdır bunu yapmazsak yazılan büyük yada küçük harfe göre aramanın etkilenmesidir çünkü javascript büyük küçük harf duyarlıdır. bu pipe üzerinede java script kodu yazacağız javascriptin filter özelliğinden yararlanacağız. Kodumuz şu şekilde olacak.
+--------------------------
+import { Pipe, PipeTransform } from '@angular/core';
+import { Product } from '../models/product';
+
+@Pipe({
+  name: 'filterPipe',
+  standalone: false
+})
+export class FilterPipePipe implements PipeTransform {
+
+  transform(value: Product[], filterText: string): Product[] {
+    filterText=filterText?filterText.toLocaleLowerCase():""
+    return filterText?value.filter((p:Product)=>p.productName.toLocaleLowerCase().indexOf(filterText)!==-1) :value
+  }
+
+}
+-------------------------
+Bunu peki nerede kullanacağız burada değiştirilmek istenen product listesi olduğundan arama yapılacak satıra değil ürünü etkileyn tüm tabloya(satıra) uygulanmalıdır.
+-------------------------
+<div *ngIf="dataLoaded==false" class="spinner-border" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+
+  <div class="mb-3">
+    <label for="filterText" class="form-label">Ürün Ara</label>
+    <input  type="text"  [(ngModel)]="filterText" class="form-control" id="filterText" placeholder="Ürün adı yaz">
+  </div>
+
+  <div *ngIf="filterText" class="alert alert-success">
+{{filterText}} aradınız.
+  </div>
+<table *ngIf="dataLoaded==true" class="table">
+  <thead>
+    <tr>
+      <th>Ürün Id</th>
+      <th>Kategori Id</th>
+      <th>Ürün Adı</th>
+      <th>Fiyatı</th>
+      <th>Kdv'li Fiyat</th>
+      <th>Stok Sayısı</th>
+    </tr>
+  </thead>
+
+  <tr *ngFor="let product of products | filterPipe:filterText">
+    <td>{{ product.productId }}</td>
+    <td>{{ product.categoryId }}</td>
+    <td>{{ product.productName | titlecase }}</td>
+    <td>{{ product.unitPrice | currency:"TRY":"TL ":""}}</td>
+    <td>{{ product.unitPrice | vatAdded:18 | currency:"TRY":"TL ":""}}</td>
+    <td>{{ product.unitsInStock }}</td>
+  </tr>
+</table>
+
+
+
 
 
 
