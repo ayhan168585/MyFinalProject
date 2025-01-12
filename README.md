@@ -3070,7 +3070,12 @@ ancak bu buton düzgün görünmüyor bu yüzden <tbody></tbody> içine satırı
   </tr>
 </tbody>
 ----------------------
-böylece sorun çözülüyor.
+böylece sorun çözülüyor. Şimdi bu butona bir event binding yapıyoruz. click özelliğini kullanıyoruz. (click)="addToCart(product)" bu şu demek bu butona tıklandığında component.ts dosyasındaki addToCart(product) fonksiyonunu çalıştır. Sepete ekle ye bazınca bize uyarı verecek bir notificasyon özelliği ekleyelim. bunun için cmd satırına npm install ngx-toastr yazarak toastr notification özelliğini ekliyoruz. Bu toastr bir animasyon paketini kullanıyor bu sebeple onuda ekliyoruz. npm install @angular/animations@19.0.5 yazarak bu paketi de ekliyoruz. Tabi toastr kullanabilmek için angular.json dosyasının still bölümüne bunun ifadsinin eklenmesi gerekiyor.
+              "./node_modules/ngx-toastr/toastr.css",
+
+daha sonraki adım app.module.ts dosyasına da import edilmesi gerekiyor.
+import { ToastrModule } from 'ngx-toastr';
+ ve imports kısmına da eklenmesi gerekiyor.
 
 
 
