@@ -3075,7 +3075,118 @@ böylece sorun çözülüyor. Şimdi bu butona bir event binding yapıyoruz. cli
 
 daha sonraki adım app.module.ts dosyasına da import edilmesi gerekiyor.
 import { ToastrModule } from 'ngx-toastr';
- ve imports kısmına da eklenmesi gerekiyor.
+ ve imports kısmına da eklenmesi gerekiyor. ancak eklerken şu şekilde ekliyoruz     ToastrModule.forRoot({
+      positionClass:"toast-bottom-right",
+      
+    })
+bu bize roottan itibaren kullanılabilir hale getir demek ayrıca sağ altta göster demek
+-------------------------
+ imports: [
+    BrowserModule,
+    AppRoutingModule,
+    FormsModule,
+    ToastrModule.forRoot({
+      positionClass:"toast-bottom-right",
+      
+    })
+  ],
+  -------------------------
+ngx-toastr sitesine giderek başka hangi özellikleri uygulanabilir oradan bakılabilir. Şimdi artık toastr kullanabiliriz. sepete ekleme esnasında kullanmak istiyoruz.product.component.ts dosyasında constructor bölümünde önce servisini ekliyoruz.
+-------------------------
+import { Component, OnInit } from '@angular/core';
+import { Product } from '../../models/product';
+import { ProductService } from '../../services/product.service';
+import { ActivatedRoute } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent implements OnInit {
+  products: Product[] = [];
+  dataLoaded=false
+  filterText=""
+ 
+  constructor(private productService:ProductService,private activatedRoute:ActivatedRoute,private toastrService:ToastrService) {}
+
+  ngOnInit(): void {
+  this.activatedRoute.params.subscribe(params=>{
+    if(params["categoryId"]){
+      this.getProductsByCategory(params["categoryId"])
+    }else{
+      this.getProducts()
+    }
+  })
+  }
+
+  getProducts() {
+   this.productService.getProducts().subscribe(response=>{
+    this.products=response.data;
+    this.dataLoaded=true
+
+   })
+  }
+  getProductsByCategory(categoryId:number){
+    this.productService.getProductsByCategory(categoryId).subscribe(response=>{
+      this.products=response.data
+      this.dataLoaded=true
+    })
+  }
+
+  addToCart(product:Product){
+    this.toastrService.success("Sepete eklendi.",product.productName)
+  }
+}
+---------------------------
+Toastr ın çalışması için BrowserAnimationModule'ünde app.module.ts dosyasına import olarak eklenmesi gerekiyor.
+----------------------------
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { ProductComponent } from './components/product/product.component';
+import { CategoryComponent } from './components/category/category.component';
+import { NaviComponent } from './components/navi/navi.component';
+import { provideHttpClient } from '@angular/common/http';
+import { VatAddedPipe } from './pipes/vat-added.pipe';
+import { FormsModule } from '@angular/forms';
+import { FilterPipePipe } from './pipes/filter-pipe.pipe';
+import { ToastrModule } from 'ngx-toastr';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    ProductComponent,
+    CategoryComponent,
+    NaviComponent,
+    VatAddedPipe,
+    FilterPipePipe
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    FormsModule,
+    ToastrModule.forRoot({
+      positionClass:"toast-bottom-right",
+
+    }),
+    BrowserAnimationsModule
+    
+  ],
+  providers: [
+    provideHttpClient()
+  ],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+----------------------------
 
 
 
