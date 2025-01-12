@@ -3188,7 +3188,78 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 export class AppModule { }
 ----------------------------
 
-Şimdi bizim burada yaptığımız sepete ekle butonuna basınca ürün sepete eklendi uyarısı geliyor ancak bizim yapmak istediğimiz sepete ürün ekleye basınca uyarının yanında üründe gerçekten sepete eklensin ama bunun için farklı yöntemler mevcut bunu veritabanı tablosu olarak oluşturabildiğimiz gibi bunu sadece frontendde tutabiliriz. amacımıza göre bu yöntem değişebilir biz bunu sadece angular üzerinde yapacağız bunun için öncelikle bir modelini oluşturmamız gerekiyor. model klasörüne geliyoruz.
+Şimdi bizim burada yaptığımız sepete ekle butonuna basınca ürün sepete eklendi uyarısı geliyor ancak bizim yapmak istediğimiz sepete ürün ekleye basınca uyarının yanında üründe gerçekten sepete eklensin ama bunun için farklı yöntemler mevcut bunu veritabanı tablosu olarak oluşturabildiğimiz gibi bunu sadece frontendde tutabiliriz. amacımıza göre bu yöntem değişebilir biz bunu sadece angular üzerinde yapacağız bunun için öncelikle bir modelini oluşturmamız gerekiyor. model klasörüne geliyoruz. cartItem adında bir interface oluşturuyoruz.
+----------------------------
+import { Product } from "./product";
+
+export interface CartItem{
+    product:Product
+    quantity:number
+}
+------------------------------
+ve bir cartItems adında bir sabit oluşturuyoruz.
+------------------------------
+import { CartItem } from "./cartitem";
+
+export const CartItems:CartItem[]=[]
+-------------------------------
+şimdi components klasörüne open in integrated ile giriyoruz ve ng g component cart-summary adında bir component oluşturuyoruz. navi.component.html dosyasında bulunan dropdown'u oradan kesiyoruz ve cart-summary.component.html sayfasına yapıştırıyoruz. kestiğimiz yere ise buranın selectorunu yani <app-cart-summary> <app-cart-summary> yazıyoruz. ve cart-summary.component.html sayfasına yapıştırdığımız bu kodu sepet sayfası olarak düzenliyoruz.
+----------------------------
+<li *ngIf="cartItems" class="nav-item dropdown">
+  <a
+    class="nav-link dropdown-toggle"
+    href="#"
+    role="button"
+    data-bs-toggle="dropdown"
+    aria-expanded="false"
+  >
+    Sepetim
+  </a>
+  <ul class="dropdown-menu">
+    <li  *ngFor="let cartItem of cartItems" >
+      <a class="dropdown-item">{{
+        cartItem.product.productName
+      }}</a>
+    </li>
+    <li><hr class="dropdown-divider" /></li>
+    <li><a class="dropdown-item">Sepete git</a></li>
+  </ul>
+</li>
+-----------------------------
+şimdi ise yapacağımız işlem sepete ekle butonuna basınca burada eklenen ürün isimlerini görmek olacak bunu tek bir sayfada değil hemen hemen ürünle ilgili her sayfada kullanacağımız için sepet işlemlerini halledecek bir servis yazıyoruz. services klasörüne open in integrated ile giriyoruz ve ng g service cart ile cart adında bir servis oluşturuyoruz.ve içinde addToCart(product:Product) adında bir fonksiyon yazıyoruz yanlız burada şunu yapacağız. diyelimki aynı ürünü bir kez daha eklemek istediğimiz de quantity sini bir arttırsın dolayısıyla öncelikle eklemek istediğimiz ürün sepette varmı yokmu kontrol etmemiz gerekiyor.
+----------------------------
+import { Injectable } from '@angular/core';
+import { Product } from '../models/product';
+import { CartItems } from '../models/cartItems';
+import { CartItem } from '../models/cartItem';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class CartService {
+
+  constructor() { }
+
+  addToCart(product:Product){
+    let item=CartItems.find(c=>c.product.productId===product.productId)
+
+    if(item){
+      item.quantity+=1
+    }else{
+      let cartItem=new CartItem()
+      cartItem.product=product
+      cartItem.quantity=1
+      CartItems.push(cartItem)
+    }
+  }
+
+  list(){
+
+    return CartItems
+  }
+}
+------------------------
+şimdi bu servisi kullanalım bunu product.component.ts dosyasında kullanıyoruz.
 
 
 
