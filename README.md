@@ -3054,8 +3054,23 @@ Bunu peki nerede kullanacağız burada değiştirilmek istenen product listesi o
 </table>
 ------------------------
 (Burada kaldık)
-
-
+Şimdi sepet işlemleriyle ilgili çalışmalar yapacağız.product.component.html dosyasında ensona bir buton ekleyeceğiz bunu yapmak için öncelikle başlık bölümünde boş bir <th></th> ekliyoruz. bunu eklemeden de alt kısımdaki satırın sonuna bir buton eklenir ancak görüntü bozulabilir diye bu <th></th>yi eklemek daha iyi sonuç verir. Bundan sonra listemizin sonuna buton eklemek için yeni bir <td></td> ekliyoruz ve içine <button></button> ekliyoruz. 
+    <td><button type="button" class="btn btn-success">Sepete ekle</button></td>
+ancak bu buton düzgün görünmüyor bu yüzden <tbody></tbody> içine satırı alarak sorunu çözüyoruz.
+-------------------------------
+<tbody>
+  <tr *ngFor="let product of products | filterPipe:filterText">
+    <td>{{ product.productId }}</td>
+    <td>{{ product.categoryId }}</td>
+    <td>{{ product.productName | titlecase }}</td>
+    <td>{{ product.unitPrice | currency:"TRY":"TL ":""}}</td>
+    <td>{{ product.unitPrice | vatAdded:18 | currency:"TRY":"TL ":""}}</td>
+    <td>{{ product.unitsInStock }}</td>
+    <td><button type="button" class="btn btn-success">Sepete ekle</button></td>
+  </tr>
+</tbody>
+----------------------
+böylece sorun çözülüyor.
 
 
 
