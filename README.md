@@ -3188,7 +3188,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 export class AppModule { }
 ----------------------------
 
-
+Şimdi bizim burada yaptığımız sepete ekle butonuna basınca ürün sepete eklendi uyarısı geliyor ancak bizim yapmak istediğimiz sepete ürün ekleye basınca uyarının yanında üründe gerçekten sepete eklensin ama bunun için farklı yöntemler mevcut bunu veritabanı tablosu olarak oluşturabildiğimiz gibi bunu sadece frontendde tutabiliriz. amacımıza göre bu yöntem değişebilir biz bunu sadece angular üzerinde yapacağız bunun için öncelikle bir modelini oluşturmamız gerekiyor. model klasörüne geliyoruz.
 
 
 
