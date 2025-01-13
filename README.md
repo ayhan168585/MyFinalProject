@@ -3260,6 +3260,116 @@ export class CartService {
 }
 ------------------------
 şimdi bu servisi kullanalım bunu product.component.ts dosyasında kullanıyoruz.
+-----------------------
+import { Component, OnInit } from '@angular/core';
+import { Product } from '../../models/product';
+import { ProductService } from '../../services/product.service';
+import { ActivatedRoute } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
+import { CartService } from '../../services/cart.service';
+
+@Component({
+  selector: 'app-product',
+  standalone: false,
+
+  templateUrl: './product.component.html',
+  styleUrl: './product.component.css',
+})
+export class ProductComponent implements OnInit {
+  products: Product[] = [];
+  dataLoaded = false;
+  filterText = '';
+
+  constructor(
+    private productService: ProductService,
+    private activatedRoute: ActivatedRoute,
+    private toastrService: ToastrService,
+    private cartService:CartService
+  ) {}
+
+  ngOnInit(): void {
+    this.activatedRoute.params.subscribe((params) => {
+      if (params['categoryId']) {
+        this.getProductsByCategory(params['categoryId']);
+      } else {
+        this.getProducts();
+      }
+    });
+  }
+
+  getProducts() {
+    this.productService.getProducts().subscribe((response) => {
+      this.products = response.data;
+      this.dataLoaded = true;
+    });
+  }
+  getProductsByCategory(categoryId: number) {
+    this.productService
+      .getProductsByCategory(categoryId)
+      .subscribe((response) => {
+        this.products = response.data;
+        this.dataLoaded = true;
+      });
+  }
+
+  addToCart(product: Product) {
+    this.cartService.addToCart(product)
+    this.toastrService.success('Sepete eklendi.', product.productName);
+  }
+}
+------------------------
+cart-summary.component.ts dosyası şu şekilde olacak
+-------------------------
+import { Component, OnInit } from '@angular/core';
+import { CartItem } from '../../models/cartItem';
+import { CartService } from '../../services/cart.service';
+
+@Component({
+  selector: 'app-cart-summary',
+  standalone: false,
+  
+  templateUrl: './cart-summary.component.html',
+  styleUrl: './cart-summary.component.css'
+})
+export class CartSummaryComponent implements OnInit {
+
+  cartItems:CartItem[]
+
+  constructor(private cartService:CartService){}
+  ngOnInit(): void {
+   this.getCart()
+  }
+
+  getCart(){
+    this.cartItems=this.cartService.list()
+  }
+
+}
+------------------------
+cart-summary.componnt.html şu şekilde olacak
+--------------------------
+<li *ngIf="cartItems.length>0" class="nav-item dropdown">
+  <a
+    class="nav-link dropdown-toggle"
+    href="#"
+    role="button"
+    data-bs-toggle="dropdown"
+    aria-expanded="false"
+  >
+    Sepetim
+  </a>
+  <ul class="dropdown-menu">
+    <li  *ngFor="let cartItem of cartItems"  >
+      <a class="dropdown-item">{{
+        cartItem.product.productName
+      }} <span class="badge text-bg-secondary">{{cartItem.quantity}}</span></a>
+    </li>
+    <li><hr class="dropdown-divider" /></li>
+    <li><a class="dropdown-item">Sepete git</a></li>
+  </ul>
+</li>
+-----------------------
+
 
 
 
