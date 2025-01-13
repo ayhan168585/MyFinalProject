@@ -3369,6 +3369,101 @@ cart-summary.componnt.html şu şekilde olacak
   </ul>
 </li>
 -----------------------
+şimdi sepetten ürün silme işlemi yapacağız öncelikle sepete eklenen ürünün hemen yanına sil ibaresi koyuyoruz.
+-------------------------
+<li *ngIf="cartItems.length>0" class="nav-item dropdown">
+  <a
+    class="nav-link dropdown-toggle"
+    href="#"
+    role="button"
+    data-bs-toggle="dropdown"
+    aria-expanded="false"
+  >
+    Sepetim
+  </a>
+  <ul class="dropdown-menu">
+    <li  *ngFor="let cartItem of cartItems"  >
+      <a class="dropdown-item">{{
+        cartItem.product.productName
+      }} <span class="badge text-bg-danger">{{cartItem.quantity}}</span> <span  class="badge text-bg-secondary"> Sil</span></a>
+    </li>
+    <li><hr class="dropdown-divider" /></li>
+    <li><a class="dropdown-item">Sepete git</a></li>
+  </ul>
+</li>
+--------------------------
+şimdi de cart servisinde silme fonksiyonunu yazıyoruz
+--------------------------
+removeFromCart(product:Product){
+    let item=CartItems.find(p=>p.product.productId===product.productId)
+   CartItems.splice(CartItems.indexOf(item),1)
+  }
+  -------------------------
+  yalnız bunu yapınca type scriptin tip güvenliğinden dolayı hata veriyor. bu sebeple tsconfig.json dosyasında "strict" 'in altına  "strictNullChecks": false, eklemesini yapıyoruz. bunu yapınca hata ortadan kalkıyor. Bu servisi cart-summary.component.ts dosyasında kullanıyoruz.
+  -----------------------
+  import { Component, OnInit } from '@angular/core';
+import { CartItem } from '../../models/cartItem';
+import { CartService } from '../../services/cart.service';
+import { ToastrService } from 'ngx-toastr';
+import { Product } from '../../models/product';
+
+@Component({
+  selector: 'app-cart-summary',
+  standalone: false,
+  
+  templateUrl: './cart-summary.component.html',
+  styleUrl: './cart-summary.component.css'
+})
+export class CartSummaryComponent implements OnInit {
+
+  cartItems:CartItem[]
+
+  constructor(private cartService:CartService,private toastrService:ToastrService){}
+  ngOnInit(): void {
+   this.getCart()
+  }
+
+  getCart(){
+    this.cartItems=this.cartService.list()
+  }
+  removeFromCart(product:Product){
+    this.cartService.removeFromCart(product)
+    this.toastrService.error("Sepetten bir ürün silindi.",product.productName)
+  }
+
+
+}
+---------------------------
+Bunu cart-summary.component.html dosyasında click olarak bu fonksiyona çağrı yapılacak
+--------------------------
+<li *ngIf="cartItems.length > 0" class="nav-item dropdown">
+  <a
+    class="nav-link dropdown-toggle"
+    href="#"
+    role="button"
+    data-bs-toggle="dropdown"
+    aria-expanded="false"
+  >
+    Sepetim
+  </a>
+  <ul class="dropdown-menu">
+    <li *ngFor="let cartItem of cartItems">
+      <a class="dropdown-item"
+        >{{ cartItem.product.productName }}
+        <span class="badge text-bg-danger">{{ cartItem.quantity }}</span>
+        <span
+          (click)="removeFromCart(cartItem.product)"
+          class="badge text-bg-secondary"
+        >
+          Sil</span
+        ></a
+      >
+    </li>
+    <li><hr class="dropdown-divider" /></li>
+    <li><a class="dropdown-item">Sepete git</a></li>
+  </ul>
+</li>
+-------------------------
 
 
 
