@@ -3464,6 +3464,46 @@ Bunu cart-summary.component.html dosyasında click olarak bu fonksiyona çağrı
   </ul>
 </li>
 -------------------------
+Şimdi reaktif formlar konusuna geçiyoruz. yani veri girme işlemlerini yapacağız.Şimdi ürün ekleyecek bir ortam oluşturalım. Reaktif formların kullanılabilmesi için öncelikle bizim daha önce eklediğimiz FormsModule'nin eklenmesi gerekir. Yine bunun yanında reaktif formların kullanılabilmesi için reaktiveFormsModule'ünde app.component.ts de eklenmesi gerekir.
+--------------------------
+import { FormsModule,ReactiveFormsModule } from '@angular/forms';
+
+
+ imports: [
+    BrowserModule,
+    AppRoutingModule,
+    FormsModule,
+    ReactiveFormsModule,
+    ToastrModule.forRoot({
+      positionClass:"toast-bottom-right",
+
+    }),
+    BrowserAnimationsModule
+    
+  ],
+
+  -------------------------
+  Bunun dışında reactive formlarla çalışabilmek için product-add.component.ts dosyasında bazı importları girmemiz gerekiyor.
+  -----------------------
+  import { FormGroup,FormBuilder,FormControl,Validators } from '@angular/forms';
+--------------------------
+FormBuilder bir servis olduğundan constructor() kısmına eklenmesi gerekiyor.
+-----------------------
+ constructor(private formBuilder:FormBuilder){}
+----------------------------
+product-add.component.ts dosyasında createProductAddForm(){} fonksiyonu ile html dosyasındaki formda hangi verilerin map edileceğini burada oluşturuyoruz.
+-------------------------
+ createProductAddForm(){
+    this.productAddForm=this.formBuilder.group({
+      productName:["",Validators.required],
+      unitPrice:["",Validators.required],
+      unitsInStock:["",Validators.required],
+      categoryId:["",Validators.required]
+    })
+  }
+  ------------------------
+  şimdi bunun html kısmını oluşturuyoruz.
+  -------------------------
 
 
 
