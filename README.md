@@ -3504,6 +3504,169 @@ product-add.component.ts dosyasında createProductAddForm(){} fonksiyonu ile htm
   ------------------------
   şimdi bunun html kısmını oluşturuyoruz.
   -------------------------
+<div class="content">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header"><h5>Ürün Ekleme</h5></div>
+      <div class="card-body">
+        <form [formGroup]="productAddForm" ngForm="add()">
+          <div class="mb-3">
+            <label for="productName"><h6>Ürün Adı</h6></label>
+            <input
+              class="form-control"
+              type="text"
+              id="productName"
+              formControlName="productName"
+              placeholder="ürün adı giriniz"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="unitPrice"><h6>Fiyatı</h6></label>
+            <input
+              class="form-control"
+              type="number"
+              id="unitPrice"
+              formControlName="unitPrice"
+              placeholder="fiyatı giriniz"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="unitsInStock"><h6>Stok Adedi</h6></label>
+            <input
+              class="form-control"
+              type="number"
+              id="unitsInStock"
+              formControlName="unitsInStock"
+              placeholder="stok giriniz"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="categoryId"><h6>Kategori</h6></label>
+            <select
+              class="form-select"
+              aria-label="Default select example"
+              id="categoryId"
+              formControlName="categoryId"             
+            >
+            <option selected>
+             Kategori seçiniz
+            </option>
+              <option *ngFor="let category of categories" [ngValue]="category.categoryId">
+                {{ category.categoryName }}
+              </option>
+            </select>
+          </div>         
+        </form>
+      </div>
+      <div class="card-footer">
+        <button type="submit" class="btn btn-fill btn-primary" (click)="add()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+-------------------------
+Buradaki formControlName product-add.component.ts ile maplemeyi sağlar. Buttona basılınca product-add.component.ts dosyasındaki (click)="add()" fonksiyonu çalışır.
+veritabanına girdiğimiz ürün bilgilerini gireceğiz. biz bu işlemler için servis kullanıyoruz.
+-------------------------
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { ListResponseModel } from '../models/listResponseModel';
+import { Product } from '../models/product';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ProductService {
+  apiUrl = 'https://localhost:7206/api/';
+
+
+  constructor(private httpClient: HttpClient) { }
+
+   getProducts():Observable<ListResponseModel<Product>> {
+    let newPath=this.apiUrl+"products/getall"
+     return this.httpClient.get<ListResponseModel<Product>>(newPath);       
+        }
+        getProductsByCategory(categoryId:number):Observable<ListResponseModel<Product>>{
+          let newPath=this.apiUrl+"products/getallbycategoryid?categoryId="+categoryId
+          return this.httpClient.get<ListResponseModel<Product>>(newPath)
+        }
+        add(product:Product){
+         return this.httpClient.post(this.apiUrl+"products/add",product)
+        }
+    }
+
+--------------------------
+son olarak product-add.component.ts dosyasında add() fonksiyonunu yazıyoruz.
+---------------------------
+import { Component, OnInit } from '@angular/core';
+import {
+  FormGroup,
+  FormBuilder,
+  FormControl,
+  Validators,
+} from '@angular/forms';
+import { Category } from '../../models/category';
+import { CategoryService } from '../../services/category.service';
+import { Product } from '../../models/product';
+import { ProductService } from '../../services/product.service';
+import { ToastrService } from 'ngx-toastr';
+
+@Component({
+  selector: 'app-product-add',
+  standalone: false,
+
+  templateUrl: './product-add.component.html',
+  styleUrl: './product-add.component.css',
+})
+export class ProductAddComponent implements OnInit {
+  productAddForm: FormGroup;
+  categories: Category[];
+
+  constructor(
+    private formBuilder: FormBuilder,
+    private categoryService: CategoryService,
+    private productService: ProductService,
+    private toastrService:ToastrService
+  ) {}
+
+  ngOnInit(): void {
+    this.getCategories();
+    this.createProductAddForm();
+  }
+
+  createProductAddForm() {
+    this.productAddForm = this.formBuilder.group({
+      productName: ['', Validators.required],
+      unitPrice: ['', Validators.required],
+      unitsInStock: ['', Validators.required],
+      categoryId: ['', Validators.required],
+    });
+  }
+  getCategories() {
+    this.categoryService.getCategories().subscribe((response) => {
+      this.categories = response.data;
+    });
+  }
+  add() {
+    if(this.productAddForm.valid){
+      let productModel = Object.assign({},this.productAddForm.value)
+      this.productService.add(productModel).subscribe(response=>{
+        productModel=response
+      },responseError=>{
+        this.toastrService.error("Bu ürün eklenemez",responseError.error)
+      }) 
+          this.toastrService.success("Bir ürün eklendi",productModel.productName)
+    }else{
+      this.toastrService.error("Ürün ekleme sırasında hata oluştu")
+    }
+  
+  }
+}
+------------------------
+
+
 
 
 
