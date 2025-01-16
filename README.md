@@ -101,7 +101,6 @@ namespace Core.DataAccess.EntityFramework
                 context.SaveChanges();
             }
         }
-
         public void Delete(TEntity entity)
         {
             using (TContext context = new TContext())
@@ -111,7 +110,6 @@ namespace Core.DataAccess.EntityFramework
                 context.SaveChanges();
             }
         }
-
         public TEntity Get(Expression<Func<TEntity, bool>> filter)
         {
             using (TContext context = new TContext())
@@ -119,7 +117,6 @@ namespace Core.DataAccess.EntityFramework
                 return context.Set<TEntity>().SingleOrDefault(filter);
             }
         }
-
         public List<TEntity> GetAll(Expression<Func<TEntity, bool>> filter = null)
         {
             using (TContext context = new TContext())
@@ -127,7 +124,6 @@ namespace Core.DataAccess.EntityFramework
                 return filter == null ? context.Set<TEntity>().ToList() : context.Set<TEntity>().Where(filter).ToList();
             }
         }
-
         public void Update(TEntity entity)
         {
             using (TContext context = new TContext())
@@ -229,19 +225,16 @@ namespace Business.Concrete
     public class ProductManager : IProductService
     {
         IProductDal _productDal;
-
         public ProductManager(IProductDal productDal)
         {
             _productDal = productDal;
         }
-
         public IResult Add(Product product)
         {
             if (product.ProductName.Length < 2) 
             {
                 return new ErrorResult(Messages.ProductNameInvalid);
             }
-
             _productDal.Add(product);
             return new SuccessResult(Messages.ProductAdded);
         }
@@ -254,7 +247,6 @@ namespace Business.Concrete
             _productDal.Update(product);
             return new SuccessResult(Messages.ProductUpdated);
         }
-
         public IDataResult<List<Product>> GetAll()
         {
             if (DateTime.Now.Hour==22)
@@ -263,28 +255,22 @@ namespace Business.Concrete
             }
             return new SuccessDataResult<List<Product>>(_productDal.GetAll(),Messages.ProductsListed);
         }
-
         public IDataResult<List<Product>> GetAllByCategoryId(int id)
         {
             return new SuccessDataResult<List<Product>> (_productDal.GetAll(p=>p.CategoryId==id),Messages.ProductsListedWithCategory);
         }
-
         public IDataResult<List<Product>> GetAllByUnitPrice(decimal min, decimal max)
         {
             return new SuccessDataResult<List<Product>>(_productDal.GetAll(p=>p.UnitPrice>=min && p.UnitPrice<=max),Messages.ProductsListedWithUnitPrice);
-
         }
-
         public IDataResult<Product> GetById(int productId)
         {
             return new SuccessDataResult<Product>(_productDal.Get   (p=>p.ProductId==productId),Messages.ProductDetailListed);
         }
-
         public IDataResult<List<ProductDetailDto>> GetProductDetails()
         {
             return new SuccessDataResult<List<ProductDetailDto>>(_productDal.GetProductDetails(),Messages.ProductsListed);
         }
-
         public IResult Delete(Product product)
         {
             _productDal.Delete(product);
@@ -359,20 +345,15 @@ namespace Core.Utilities.Results
 {
     public class Result : IResult
     {
-       
-
         public Result(bool isSuccess, string message):this(isSuccess)
         {
             Message  = message;
         }
-
         public Result(bool isSuccess)
         {
             IsSuccess = isSuccess;
         }
-
         public bool IsSuccess {  get; }
-
         public string Message { get; }
     }
 }
@@ -390,12 +371,9 @@ namespace Core.Utilities.Results
         public SuccessResult(string message) : base(true,message)
         {
         }
-
         public SuccessResult() : base(true) 
         { 
         }
-
-
     }
 }
 ----------------------------
@@ -444,15 +422,12 @@ namespace Core.Utilities.Results
     {
         public DataResult(T data,bool isSuccess,string message):base(isSuccess,message)
         {
-            Data = data;
-            
+            Data = data;            
         }
         public DataResult(T data,bool isSuccess):base(isSuccess)
         {
             Data = data;
-        }
-       
-
+        }  
         public T Data {  get;}
     }
 }
@@ -468,23 +443,17 @@ namespace Core.Utilities.Results
     public class SuccessDataResult<T> : DataResult<T>
     {
         public SuccessDataResult(T data,string message):base(data,true,message)
-        {
-              
+        {              
         }
         public SuccessDataResult(T data):base(data,true)
-        {
-            
-            
+        {             
         }
         public SuccessDataResult(string message):base(default,true,message)
-        {
-            
+        {            
         }
         public SuccessDataResult():base(default,true)
-        {
-            
-        }
-        
+        {            
+        }        
     }
 }
 ---------------------------------
@@ -500,22 +469,16 @@ namespace Core.Utilities.Results
     {
         public ErrorDataResult(T data, string message) : base(data, false, message)
         {
-
         }
         public ErrorDataResult(T data) : base(data, false)
         {
-
-
         }
         public ErrorDataResult(string message) : base(default, false, message)
         {
-
         }
         public ErrorDataResult() : base(default, false)
         {
-
         }
-
     }
 }
 --------------------------
@@ -610,12 +573,10 @@ namespace WebAPI.Controllers
     public class ProductsController : ControllerBase
     {
         IProductService _productService;
-
         public ProductsController(IProductService productService)
         {
             _productService = productService;
         }
-
         [HttpGet("getall")]
         public IActionResult GetAll()
         {
@@ -625,7 +586,6 @@ namespace WebAPI.Controllers
                 return Ok(result);          
             }
             return BadRequest(result);
-
         }
         [HttpGet("getbyid")]
         public IActionResult GetById(int id)
@@ -637,7 +597,6 @@ namespace WebAPI.Controllers
             }
             return BadRequest(result);
         }
-
         [HttpPost("add")]
         public IActionResult Add(Product product) 
         {
@@ -736,7 +695,6 @@ using System.Threading.Tasks;
 
 namespace Core.Utilities.Interceptors
 {
-
     public class AspectInterceptorSelector : IInterceptorSelector
     {
         public IInterceptor[] SelectInterceptors(Type type, MethodInfo method, IInterceptor[] interceptors)
@@ -746,8 +704,6 @@ namespace Core.Utilities.Interceptors
             var methodAttributes = type.GetMethod(method.Name)
                 .GetCustomAttributes<MethodInterceptionBaseAttribute>(true);
             classAttributes.AddRange(methodAttributes);
-
-
             return classAttributes.OrderBy(x => x.Priority).ToArray();
         }
     }
@@ -797,11 +753,9 @@ namespace Core.Utilities.Interceptors
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
     public abstract class MethodInterceptionBaseAttribute : Attribute, IInterceptor
     {
-        public int Priority { get; set; }   
-
+        public int Priority { get; set; }
         public virtual void Intercept(IInvocation invocation)
         {
-
         }
     }
 }
@@ -829,7 +783,6 @@ namespace Core.Aspects.Autofac.Validation
             {
                 throw new System.Exception("Bu bir doğrulama sınıfı değil");
             }
-
             _validatorType = validatorType;
         }
         protected override void OnBefore(IInvocation invocation)
@@ -875,9 +828,7 @@ namespace Business.DependencyResolvers.Autofac
             builder.RegisterType<EfCustomerDal>().As<ICustomerDal>().SingleInstance();
             builder.RegisterType<OrderManager>().As<IOrderService>().SingleInstance();
             builder.RegisterType<EfOrderDal>().As<IOrderDal>().SingleInstance();
-
             var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-
             builder.RegisterAssemblyTypes(assembly).AsImplementedInterfaces()
                 .EnableInterfaceInterceptors(new ProxyGenerationOptions()
                 {
@@ -912,12 +863,10 @@ namespace Business.Concrete
     public class ProductManager : IProductService
     {
         IProductDal _productDal;
-
         public ProductManager(IProductDal productDal)
         {
             _productDal = productDal;
         }
-
         [ValidationAspect(typeof(ProductValidator))]
         public IResult Add(Product product)
         {
@@ -933,7 +882,6 @@ namespace Business.Concrete
             _productDal.Update(product);
             return new SuccessResult(Messages.ProductUpdated);
         }
-
         public IDataResult<List<Product>> GetAll()
         {
             if (DateTime.Now.Hour==22)
@@ -942,28 +890,22 @@ namespace Business.Concrete
             }
             return new SuccessDataResult<List<Product>>(_productDal.GetAll(),Messages.ProductsListed);
         }
-
         public IDataResult<List<Product>> GetAllByCategoryId(int id)
         {
             return new SuccessDataResult<List<Product>> (_productDal.GetAll(p=>p.CategoryId==id),Messages.ProductsListedWithCategory);
         }
-
         public IDataResult<List<Product>> GetAllByUnitPrice(decimal min, decimal max)
         {
             return new SuccessDataResult<List<Product>>(_productDal.GetAll(p=>p.UnitPrice>=min && p.UnitPrice<=max),Messages.ProductsListedWithUnitPrice);
-
         }
-
         public IDataResult<Product> GetById(int productId)
         {
             return new SuccessDataResult<Product>(_productDal.Get   (p=>p.ProductId==productId),Messages.ProductDetailListed);
         }
-
         public IDataResult<List<ProductDetailDto>> GetProductDetails()
         {
             return new SuccessDataResult<List<ProductDetailDto>>(_productDal.GetProductDetails(),Messages.ProductsListed);
         }
-
         public IResult Delete(Product product)
         {
             _productDal.Delete(product);
@@ -992,7 +934,6 @@ namespace Core.Utilities.Business
                 {
                     return logic;
                 }
-
             }
             return null;
         }
@@ -1090,7 +1031,6 @@ namespace Core.Utilities.Security.Hashing
                 passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
             }
         }
-
         public static bool VerifyPasswordHash(string password,byte[] passwordHash,byte[] passwordSalt)
         {
             using (var hmac = new System.Security.Cryptography.HMACSHA512(passwordSalt))
@@ -1104,9 +1044,7 @@ namespace Core.Utilities.Security.Hashing
                     }
                 }
                 return true;
-            }
-
-           
+            }           
         }
     }
 }
@@ -1202,7 +1140,6 @@ namespace Core.Utilities.Security.JWT
         {
             Configuration = configuration;
             _tokenOptions = Configuration.GetSection("TokenOptions").Get<TokenOptions>();
-
         }
         public AccessToken CreateToken(User user, List<OperationClaim> operationClaims)
         {
@@ -1212,15 +1149,12 @@ namespace Core.Utilities.Security.JWT
             var jwt = CreateJwtSecurityToken(_tokenOptions, user, signingCredentials, operationClaims);
             var jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
             var token = jwtSecurityTokenHandler.WriteToken(jwt);
-
             return new AccessToken
             {
                 Token = token,
                 Expiration = _accessTokenExpiration
             };
-
         }
-
         public JwtSecurityToken CreateJwtSecurityToken(TokenOptions tokenOptions, User user,
             SigningCredentials signingCredentials, List<OperationClaim> operationClaims)
         {
@@ -1234,7 +1168,6 @@ namespace Core.Utilities.Security.JWT
             );
             return jwt;
         }
-
        private IEnumerable<Claim> SetClaims(User user, List<OperationClaim> operationClaims)
  {
      var claims = new List<Claim>
@@ -1243,9 +1176,7 @@ namespace Core.Utilities.Security.JWT
          new Claim(ClaimTypes.Email, user.Email),
          new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
      };
-
      claims.AddRange(operationClaims.Select(c => new Claim(ClaimTypes.Role, c.Name)).ToArray());
-
      return claims;
  }
     }
@@ -1297,17 +1228,14 @@ namespace Core.Extensions
         {
             claims.Add(new Claim(JwtRegisteredClaimNames.Email, email));
         }
-
         public static void AddName(this ICollection<Claim> claims, string name)
         {
             claims.Add(new Claim(ClaimTypes.Name, name));
         }
-
         public static void AddNameIdentifier(this ICollection<Claim> claims, string nameIdentifier)
         {
             claims.Add(new Claim(ClaimTypes.NameIdentifier, nameIdentifier));
         }
-
         public static void AddRoles(this ICollection<Claim> claims, string[] roles)
         {
             roles.ToList().ForEach(role => claims.Add(new Claim(ClaimTypes.Role, role)));
@@ -1332,7 +1260,6 @@ namespace Core.Extensions
             var result = claimsPrincipal?.FindAll(claimType)?.Select(x => x.Value).ToList();
             return result;
         }
-
         public static List<string> ClaimRoles(this ClaimsPrincipal claimsPrincipal)
         {
             return claimsPrincipal?.Claims(ClaimTypes.Role);
@@ -1359,14 +1286,11 @@ namespace Business.BusinessAspects.Autofac
     {
         private string[] _roles;
         private IHttpContextAccessor _httpContextAccessor;
-
         public SecuredOperation(string roles)
         {
             _roles = roles.Split(',');
             _httpContextAccessor =  ServiceTool.ServiceProvider.GetService<IHttpContextAccessor>();
-
         }
-
         protected override void OnBefore(IInvocation invocation)
         {
             var roleClaims = _httpContextAccessor.HttpContext.User.ClaimRoles();
@@ -1394,7 +1318,6 @@ namespace Core.Utilities.IoC
     public static class ServiceTool
     {
         public static IServiceProvider ServiceProvider { get; private set; }
-
         public static IServiceCollection Create(IServiceCollection services)
         {
             ServiceProvider = services.BuildServiceProvider();
@@ -1530,22 +1453,18 @@ namespace Business.Concrete
     public class UserManager : IUserService
     {
         IUserDal _userDal;
-
         public UserManager(IUserDal userDal)
         {
             _userDal = userDal;
         }
-
         public List<OperationClaim> GetClaims(User user)
         {
             return _userDal.GetClaims(user);
         }
-
         public void Add(User user)
         {
             _userDal.Add(user);
         }
-
         public User GetByMail(string email)
         {
             return _userDal.Get(u => u.Email == email);
@@ -1567,13 +1486,11 @@ namespace Business.Concrete
     {
         private IUserService _userService;
         private ITokenHelper _tokenHelper;
-
         public AuthManager(IUserService userService, ITokenHelper tokenHelper)
         {
             _userService = userService;
             _tokenHelper = tokenHelper;
         }
-
         public IDataResult<User> Register(UserForRegisterDto userForRegisterDto, string password)
         {
             byte[] passwordHash, passwordSalt;
@@ -1590,7 +1507,6 @@ namespace Business.Concrete
             _userService.Add(user);
             return new SuccessDataResult<User>(user, Messages.UserRegistered);
         }
-
         public IDataResult<User> Login(UserForLoginDto userForLoginDto)
         {
             var userToCheck = _userService.GetByMail(userForLoginDto.Email);
@@ -1598,15 +1514,12 @@ namespace Business.Concrete
             {
                 return new ErrorDataResult<User>(Messages.UserNotFound);
             }
-
             if (!HashingHelper.VerifyPasswordHash(userForLoginDto.Password, userToCheck.Data.PasswordHash, userToCheck.Data.PasswordSalt))
             {
                 return new ErrorDataResult<User>(Messages.PasswordError);
             }
-
             return new SuccessDataResult<User>(userToCheck.Data, Messages.SuccessfulLogin);
         }
-
         public IResult UserExists(string email)
         {
             if (_userService.GetByMail(email) != null)
@@ -1615,7 +1528,6 @@ namespace Business.Concrete
             }
             return new SuccessResult();
         }
-
         public IDataResult<AccessToken> CreateAccessToken(User user)
         {
             var claims = _userService.GetClaims(user);
@@ -1671,12 +1583,10 @@ namespace WebAPI.Controllers
     public class AuthController : Controller
     {
         private IAuthService _authService;
-
         public AuthController(IAuthService authService)
         {
             _authService = authService;
         }
-
         [HttpPost("login")]
         public ActionResult Login(UserForLoginDto userForLoginDto)
         {
@@ -1685,16 +1595,13 @@ namespace WebAPI.Controllers
             {
                 return BadRequest(userToLogin.Message);
             }
-
             var result = _authService.CreateAccessToken(userToLogin.Data);
             if (result.Success)
             {
                 return Ok(result);
             }
-
             return BadRequest(result.Message);
         }
-
         [HttpPost("register")]
         public ActionResult Register(UserForRegisterDto userForRegisterDto)
         {
@@ -1703,14 +1610,12 @@ namespace WebAPI.Controllers
             {
                 return BadRequest(userExists.Message);
             }
-
             var registerResult = _authService.Register(userForRegisterDto, userForRegisterDto.Password);
             var result = _authService.CreateAccessToken(registerResult.Data);
             if (result.Success)
             {
                 return Ok(result.Data);
             }
-
             return BadRequest(result.Message);
         }
     }
@@ -1735,7 +1640,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
@@ -1885,7 +1789,6 @@ namespace Core.CrossCuttingConcerns.Caching.Microsoft
     {
         //Adapter Pattern
         IMemoryCache _memoryCache;
-
         public MemoryCacheManager()
         {
             _memoryCache = ServiceTool.ServiceProvider.GetService<IMemoryCache>();
@@ -1894,42 +1797,34 @@ namespace Core.CrossCuttingConcerns.Caching.Microsoft
         {
             return _memoryCache.Get<T>(key);
         }
-
         public object Get(string key)
         {
             return _memoryCache.Get(key);
         }
-
         public void Add(string key, object value, int duration)
         {
             _memoryCache.Set(key, value, TimeSpan.FromMinutes(duration));
         }
-
         public bool IsAdd(string key)
         {
             return _memoryCache.TryGetValue(key,out _);
         }
-
         public void Remove(string key)
         {
            _memoryCache.Remove(key);
         }
-
         public void RemoveByPattern(string pattern)
         {
             var cacheEntriesCollectionDefinition = typeof(MemoryCache).GetProperty("EntriesCollection", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             var cacheEntriesCollection = cacheEntriesCollectionDefinition.GetValue(_memoryCache) as dynamic;
             List<ICacheEntry> cacheCollectionValues = new List<ICacheEntry>();
-
             foreach (var cacheItem in cacheEntriesCollection)
             {
                 ICacheEntry cacheItemValue = cacheItem.GetType().GetProperty("Value").GetValue(cacheItem, null);
                 cacheCollectionValues.Add(cacheItemValue);
             }
-
             var regex = new Regex(pattern, RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
             var keysToRemove = cacheCollectionValues.Where(d => regex.IsMatch(d.Key.ToString())).Select(d => d.Key).ToList();
-
             foreach (var key in keysToRemove)
             {
                 _memoryCache.Remove(key);
@@ -1985,13 +1880,11 @@ namespace Core.Aspects.Autofac.Caching
     {
         private int _duration;
         private ICacheManager _cacheManager;
-
         public CacheAspect(int duration = 60)
         {
             _duration = duration;
             _cacheManager = ServiceTool.ServiceProvider.GetService<ICacheManager>();
         }
-
         public override void Intercept(IInvocation invocation)
         {
             var methodName = string.Format($"{invocation.Method.ReflectedType.FullName}.{invocation.Method.Name}");
@@ -2025,13 +1918,11 @@ namespace Core.Aspects.Autofac.Caching
     {
         private string _pattern;
         private ICacheManager _cacheManager;
-
         public CacheRemoveAspect(string pattern)
         {
             _pattern = pattern;
             _cacheManager = ServiceTool.ServiceProvider.GetService<ICacheManager>();
         }
-
         protected override void OnSuccess(IInvocation invocation)
         {
             _cacheManager.RemoveByPattern(_pattern);
@@ -2051,8 +1942,7 @@ namespace Core.Aspects.Autofac.Caching
      if (Toplam >= 15)
      {
          return new ErrorResult();
-     }
-    
+     }    
      _productDal.Add(product);
      return new SuccessResult(Messages.ProductAdded);
  }
@@ -2124,7 +2014,6 @@ Controller'de şu eklemeyi yapıyoruz.
             {
                 return Ok(result.Message);
             }
-
             return BadRequest(result.Message);
         }
         ------------------------
@@ -2149,19 +2038,15 @@ namespace Core.Aspects.Autofac.Performance
     {
         private int _interval;
         private Stopwatch _stopwatch;
-
         public PerformanceAspect(int interval)
         {
             _interval = interval;
             _stopwatch = ServiceTool.ServiceProvider.GetService<Stopwatch>();
         }
-
-
         protected override void OnBefore(IInvocation invocation)
         {
             _stopwatch.Start();
         }
-
         protected override void OnAfter(IInvocation invocation)
         {
             if (_stopwatch.Elapsed.TotalSeconds>_interval)
@@ -2196,7 +2081,6 @@ namespace Core.Utilities.Interceptors
                 .GetCustomAttributes<MethodInterceptionBaseAttribute>(true);
             classAttributes.AddRange(methodAttributes);
             classAttributes.Add(new ExceptionLogAspect(typeof(FileLogger)));
-
             return classAttributes.OrderBy(x => x.Priority).ToArray();
         }
     }
@@ -2748,8 +2632,7 @@ export class ProductService {
 
    getProducts():Observable<ListResponseModel<Product>> {
     let newPath=this.apiUrl+"products/getall"
-     return this.httpClient.get<ListResponseModel<Product>>(newPath);
-       
+     return this.httpClient.get<ListResponseModel<Product>>(newPath);       
         }
         getProductsByCategory(categoryId:number):Observable<ListResponseModel<Product>>{
           let newPath=this.apiUrl+"products/getallbycategoryid?categoryId="+categoryId
@@ -2832,8 +2715,7 @@ Böylece solda seçilen kategori ne ise o kategoriden olan ürünler ekrana geli
 eklemesi yapıyoruz. Ama angular 18 de çalışmadı. Yeni versiyon angularda çalışması için 
 ---------------------------
  "styles": [
-              "./node_modules/bootstrap/dist/css/bootstrap.min.css",
-             
+              "./node_modules/bootstrap/dist/css/bootstrap.min.css",             
               "src/styles.css"
             ],
             "scripts": [
@@ -3053,7 +2935,7 @@ Bunu peki nerede kullanacağız burada değiştirilmek istenen product listesi o
   </tr>
 </table>
 ------------------------
-(Burada kaldık)
+
 Şimdi sepet işlemleriyle ilgili çalışmalar yapacağız.product.component.html dosyasında ensona bir buton ekleyeceğiz bunu yapmak için öncelikle başlık bölümünde boş bir <th></th> ekliyoruz. bunu eklemeden de alt kısımdaki satırın sonuna bir buton eklenir ancak görüntü bozulabilir diye bu <th></th>yi eklemek daha iyi sonuç verir. Bundan sonra listemizin sonuna buton eklemek için yeni bir <td></td> ekliyoruz ve içine <button></button> ekliyoruz. 
     <td><button type="button" class="btn btn-success">Sepete ekle</button></td>
 ancak bu buton düzgün görünmüyor bu yüzden <tbody></tbody> içine satırı alarak sorunu çözüyoruz.
@@ -3242,7 +3124,6 @@ export class CartService {
 
   addToCart(product:Product){
     let item=CartItems.find(c=>c.product.productId===product.productId)
-
     if(item){
       item.quantity+=1
     }else{
@@ -3254,7 +3135,6 @@ export class CartService {
   }
 
   list(){
-
     return CartItems
   }
 }
@@ -3464,6 +3344,7 @@ Bunu cart-summary.component.html dosyasında click olarak bu fonksiyona çağrı
   </ul>
 </li>
 -------------------------
+(Burada kaldık)
 Şimdi reaktif formlar konusuna geçiyoruz. yani veri girme işlemlerini yapacağız.Şimdi ürün ekleyecek bir ortam oluşturalım. Reaktif formların kullanılabilmesi için öncelikle bizim daha önce eklediğimiz FormsModule'nin eklenmesi gerekir. Yine bunun yanında reaktif formların kullanılabilmesi için reaktiveFormsModule'ünde app.component.ts de eklenmesi gerekir.
 --------------------------
 import { FormsModule,ReactiveFormsModule } from '@angular/forms';
@@ -3476,7 +3357,6 @@ import { FormsModule,ReactiveFormsModule } from '@angular/forms';
     ReactiveFormsModule,
     ToastrModule.forRoot({
       positionClass:"toast-bottom-right",
-
     }),
     BrowserAnimationsModule
     
@@ -3665,6 +3545,190 @@ export class ProductAddComponent implements OnInit {
   }
 }
 ------------------------
+Burada herhangi bir hata oluştuğunda hatayı yakaladık ancak backend'de genel bir hata yakalama(Try-catch) yapacağız.Bu sebeple şimdi öncelikle backend'de bu işlemi yapalım.
+core katmanındaki extensions klasörüne exceptionmiddleware adında bir class oluşturuyoruz.
+-------------------------
+using FluentValidation;
+using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Extensions
+{
+    public class ExceptionMiddleware
+    {
+        private RequestDelegate _next;
+        public ExceptionMiddleware(RequestDelegate next)
+        {
+            _next = next;
+        }
+        public async Task InvokeAsync(HttpContext httpContext)
+        {
+            try
+            {
+                await _next(httpContext);
+            }
+            catch (Exception e)
+            {
+                await HandleExceptionAsync(httpContext, e);
+            }
+        }
+        private Task HandleExceptionAsync(HttpContext httpContext, Exception e)
+        {
+            httpContext.Response.ContentType = "application/json";
+            httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            string message = "Internal Server Error";
+            if (e.GetType() == typeof(ValidationException))
+            {
+                message = e.Message;
+            }
+            return httpContext.Response.WriteAsync(new ErrorDetails
+            {
+                StatusCode = httpContext.Response.StatusCode,
+                Message = message
+            }.ToString());
+        }
+    }
+}
+-------------------------
+Ayrıca extensions klasörüne ErrorDetails classı oluşturuyoruz.
+-------------------------
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Extensions
+{
+    public class ErrorDetails
+    {
+        public string Message { get; set; }
+        public int StatusCode { get; set; }
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+    }
+}
+---------------------------
+Burada JsonConvert'in çalışması için NewtonSoft paketinin kurulması gerekiyor.
+---------------------------
+Birde extensions klasörüne ExceptionMiddlewareExtensions adında bir class oluşturulur.
+---------------------------using Microsoft.AspNetCore.Builder;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Extensions
+{
+    public static class ExceptionMiddlewareExtensions
+    {
+        public static void ConfigureCustomExceptionMiddleware(this IApplicationBuilder app)
+        {
+            app.UseMiddleware<ExceptionMiddleware>();
+        }
+    }
+}
+--------------------------
+Bundan sonra webAPI katmanındaki program.cs dosaysına
+---------------------------
+app.ConfigureCustomExceptionMiddleware();
+---------------------------
+eklenmesi gerekiyor.
+------------------------------
+Şimdi exceptionmiddleware dosyasını biraz refaktör edelim.
+----------------------------
+using FluentValidation;
+using FluentValidation.Results;
+using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Extensions
+{
+    public class ExceptionMiddleware
+    {
+        private RequestDelegate _next;
+        public ExceptionMiddleware(RequestDelegate next)
+        {
+            _next = next;
+        }
+        public async Task InvokeAsync(HttpContext httpContext)
+        {
+            try
+            {
+                await _next(httpContext);
+            }
+            catch (Exception e)
+            {
+                await HandleExceptionAsync(httpContext, e);
+            }
+        }
+        private Task HandleExceptionAsync(HttpContext httpContext, Exception e)
+        {
+            httpContext.Response.ContentType = "application/json";
+            httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            string message = "Internal Server Error";
+            IEnumerable<ValidationFailure> errors;
+            if (e.GetType() == typeof(ValidationException))
+            {
+                message = e.Message;
+                errors=((ValidationException)e).Errors;
+                // httpContext.Response.StatusCode = 400;
+                return httpContext.Response.WriteAsync(new ErrorDetails
+                {
+                    Message = message,
+                    StatusCode = 400,
+                    Errors = errors
+                }.ToString());
+            }
+            return httpContext.Response.WriteAsync(new ErrorDetails
+            {
+                StatusCode = httpContext.Response.StatusCode,
+                Message = message
+            }.ToString());
+        }
+    }
+}
+---------------------------
+tabi bunu yapınca ErrorDetails classına da bir property eklememiz gerekiyor.
+----------------------------
+using FluentValidation.Results;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Extensions
+{
+    public class ErrorDetails
+    {
+        public string Message { get; set; }
+        public int StatusCode { get; set; }
+        public IEnumerable<ValidationFailure> Errors { get; set; }
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+    }
+}
+-----------------------------
+
+
 
 
 
