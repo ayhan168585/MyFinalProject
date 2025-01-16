@@ -3057,7 +3057,6 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
     FormsModule,
     ToastrModule.forRoot({
       positionClass:"toast-bottom-right",
-
     }),
     BrowserAnimationsModule
     
@@ -3345,7 +3344,7 @@ Bunu cart-summary.component.html dosyasında click olarak bu fonksiyona çağrı
 </li>
 -------------------------
 (Burada kaldık)
-Şimdi reaktif formlar konusuna geçiyoruz. yani veri girme işlemlerini yapacağız.Şimdi ürün ekleyecek bir ortam oluşturalım. Reaktif formların kullanılabilmesi için öncelikle bizim daha önce eklediğimiz FormsModule'nin eklenmesi gerekir. Yine bunun yanında reaktif formların kullanılabilmesi için reaktiveFormsModule'ünde app.component.ts de eklenmesi gerekir.
+Şimdi reaktif formlar konusuna geçiyoruz. yani veri girme işlemlerini yapacağız.Şimdi ürün ekleyecek bir ortam oluşturalım. Reaktif formların kullanılabilmesi için öncelikle bizim daha önce eklediğimiz FormsModule'nin eklenmesi gerekir. Yine bunun yanında reaktif formların kullanılabilmesi için reaktiveFormsModule'ünde app.module.ts de eklenmesi gerekir.Şimdi components klasörünün içine girerek product-add adında component oluştur.
 --------------------------
 import { FormsModule,ReactiveFormsModule } from '@angular/forms';
 
