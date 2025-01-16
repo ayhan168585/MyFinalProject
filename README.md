@@ -3686,12 +3686,12 @@ namespace Core.Extensions
             {
                 message = e.Message;
                 errors=((ValidationException)e).Errors;
-                // httpContext.Response.StatusCode = 400;
-                return httpContext.Response.WriteAsync(new ErrorDetails
+                httpContext.Response.StatusCode = 400;
+                return httpContext.Response.WriteAsync(new ValidationErrorDetails
                 {
                     Message = message,
                     StatusCode = 400,
-                    Errors = errors
+                    ValidationErrors = errors
                 }.ToString());
             }
             return httpContext.Response.WriteAsync(new ErrorDetails
@@ -3703,7 +3703,7 @@ namespace Core.Extensions
     }
 }
 ---------------------------
-tabi bunu yapınca ErrorDetails classına da bir property eklememiz gerekiyor.
+tabi bunu yapınca ErrorDetails classına da bir property eklememiz gerekiyor. Ayrıca sistem hatasıyla validasyon hatasını biribirinden ayırmak için yani sistem hatasıysa Errors'u frontende göndermemek için ValidationErrorDetails classını ekliyoruz.
 ----------------------------
 using FluentValidation.Results;
 using Newtonsoft.Json;
@@ -3719,15 +3719,102 @@ namespace Core.Extensions
     {
         public string Message { get; set; }
         public int StatusCode { get; set; }
-        public IEnumerable<ValidationFailure> Errors { get; set; }
         public override string ToString()
         {
             return JsonConvert.SerializeObject(this);
         }
     }
+    public class ValidationErrorDetails : ErrorDetails()
+    {
+        public IEnumerable<ValidationFailure> ValidationErrors { get; set; }
+    }
 }
------------------------------
 
+-----------------------------
+Frontend tarafında visualcode da product-add.component.ts dosyasını şu şekilde düzenliyoruz.
+---------------------------
+import { Component, OnInit } from '@angular/core';
+import {
+  FormGroup,
+  FormBuilder,
+  FormControl,
+  Validators,
+} from '@angular/forms';
+import { Category } from '../../models/category';
+import { CategoryService } from '../../services/category.service';
+import { Product } from '../../models/product';
+import { ProductService } from '../../services/product.service';
+import { ToastrService } from 'ngx-toastr';
+
+@Component({
+  selector: 'app-product-add',
+  standalone: false,
+
+  templateUrl: './product-add.component.html',
+  styleUrl: './product-add.component.css',
+})
+export class ProductAddComponent implements OnInit {
+  productAddForm: FormGroup;
+  categories: Category[];
+
+  constructor(
+    private formBuilder: FormBuilder,
+    private categoryService: CategoryService,
+    private productService: ProductService,
+    private toastrService: ToastrService
+  ) {}
+
+  ngOnInit(): void {
+    this.getCategories();
+    this.createProductAddForm();
+  }
+
+  createProductAddForm() {
+    this.productAddForm = this.formBuilder.group({
+      productName: ['', Validators.required],
+      unitPrice: ['', Validators.required],
+      unitsInStock: ['', Validators.required],
+      categoryId: ['', Validators.required],
+    });
+  }
+  getCategories() {
+    this.categoryService.getCategories().subscribe((response) => {
+      this.categories = response.data;
+    });
+  }
+  add() {
+    if (this.productAddForm.valid) {
+      let productModel = Object.assign({}, this.productAddForm.value);
+      this.productService.add(productModel).subscribe(
+        (response) => {
+          productModel = response;
+          this.toastrService.success(
+            'Bir ürün eklendi',
+            productModel.productName
+          );
+        },
+        (responseError) => {
+          if (responseError.error.ValidationErrors.length > 0) {
+            for (
+              let i = 0;
+              i < responseError.error.ValidationErrors.length;
+              i++
+            ) {
+              this.toastrService.error(
+                responseError.error.ValidationErrors[i].ErrorMessage,
+               "Doğrulama Hatası"
+              );
+            }
+          }
+        }
+      );
+    } else {
+      this.toastrService.error('Ürün ekleme sırasında hata oluştu');
+    }
+  }
+}
+-------------------------
+Böylece artık Toaster da hata mesajları görülmeye başlanır.
 
 
 
