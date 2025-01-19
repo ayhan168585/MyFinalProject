@@ -4178,6 +4178,30 @@ html dosyası da şu şekilde olacak
   </div>
   ---------------------------
   (Burada kaldık)
+  Şİmdi de familyPerson.component.html dosyasında familyPerson ların listelendiği yerde thumbnail fotoğrafların görülebilmesi için API'den gelen fotoğraf adresinin [src] içinde tam adresi yazıyoruz ve böylece fotoğraflar görülüyor.
+  ----------------------------
+  <table class="table">
+  <thead>
+    <tr>
+      <th>Family Id</th>
+      <th>Adı Soyadı</th>
+      <th>Email</th>
+      <th>Profil Resmi</th>
+    </tr>
+  </thead>
+
+  <tr *ngFor="let familyPerson of familyPersons">
+    <td>{{ familyPerson.id }}</td>
+    <td>{{ familyPerson.fullName }}</td>
+    <td>{{ familyPerson.email }}</td>
+    <td>
+      <img [src]="'https://localhost:7039/uploads/profile_pictures/' + familyPerson.profilePicture"
+      class="img-thumbnail" alt="Profil Resmi" style="width: 100px; height: auto;" />
+    </td>
+  </tr>
+</table>
+---------------------------
+
   
 
 
