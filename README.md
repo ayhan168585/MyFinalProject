@@ -3343,7 +3343,7 @@ Bunu cart-summary.component.html dosyasında click olarak bu fonksiyona çağrı
   </ul>
 </li>
 -------------------------
-(Burada kaldık)
+
 Şimdi reaktif formlar konusuna geçiyoruz. yani veri girme işlemlerini yapacağız.Şimdi ürün ekleyecek bir ortam oluşturalım. Reaktif formların kullanılabilmesi için öncelikle bizim daha önce eklediğimiz FormsModule'nin eklenmesi gerekir. Yine bunun yanında reaktif formların kullanılabilmesi için reaktiveFormsModule'ünde app.module.ts de eklenmesi gerekir.Şimdi components klasörünün içine girerek product-add adında component oluştur.
 --------------------------
 import { FormsModule,ReactiveFormsModule } from '@angular/forms';
@@ -3814,6 +3814,374 @@ export class ProductAddComponent implements OnInit {
 }
 -------------------------
 Böylece artık Toaster da hata mesajları görülmeye başlanır.
+
+
+KİŞİ ID'SİNE GÖRE PROFİL FOTOĞRAFI EKLEME(hANE YÖNETİMİ PROESİNDE)
+--------------------------------------------------------------------
+Şimdi senaryo şu şekilde kuruldu yeni bir kişi kaydedilirken fotoğrafsız olarak kaydediliyor ama başka bir component yoluyla istenen herhangi bir kişiye(ID'ye göre) profil fotoğrafı ekleniyor.
+
+Öncelikle familyPerson(API'ye göre) adında bir model oluşturuluyor.
+--------------------------
+export interface FamilyPerson{
+    id:number
+    fullName:string
+    email:string
+    password:string
+    profilePicture:string
+    roleId:number 
+    
+}
+-----------------------------
+Daha sonra ekrana tüm familyPerson listesini getiren ve onun altında da yeni bir kişi klenmesini sağlayan familyPerson.componenti oluşturuluyor.
+----------------------------
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FamilyPersonService } from '../../services/family-person.service';
+import { FamilyPerson } from '../../models/familyPerson';
+import { Role } from '../../models/role';
+import { RoleService } from '../../services/role.service';
+
+@Component({
+  selector: 'app-family-person',
+  templateUrl: './family-person.component.html',
+  styleUrls: ['./family-person.component.css'],
+  standalone: false,
+})
+export class FamilyPersonComponent implements OnInit {
+  familyPersons:FamilyPerson[]
+  roles:Role[]
+
+  // 1) Kişi ekleme formu
+  personForm!: FormGroup;
+
+  // 2) Fotoğraf yükleme için input
+  selectedFile: File | null = null;
+
+  // Oluşturulan kullanıcının ID’si
+  createdPersonId: number | null = null;
+
+  constructor(
+    private fb: FormBuilder,
+    private familyPersonService: FamilyPersonService,
+    private roleService:RoleService
+  ) {}
+
+  ngOnInit(): void {
+    this.getFamilyPersons()
+    this.getRoles()
+    this.initializePersonForm();
+  }
+
+  /**
+   * Kişi ekleme (fotoğrafsız) formunu oluşturma
+   */
+  initializePersonForm() {
+    this.personForm = this.fb.group({
+      fullName: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', Validators.required],
+      profilePicture:["",Validators.required],
+      roleId: [0, Validators.required]
+    });
+  }
+
+  /**
+   * Kişi ekleme formu submit
+   */
+  onPersonFormSubmit() {
+    if (this.personForm.valid) {
+      // Form değerlerini al
+      const personData: FamilyPerson = {
+        id: 0,  // Yeni eklenen kişi
+        fullName: this.personForm.value.fullName,
+        email: this.personForm.value.email,
+        password: this.personForm.value.password,
+        profilePicture: '', // başlangıçta boş
+        roleId: this.personForm.value.roleId
+      };
+
+      // API çağrısı: kişi ekle
+      this.familyPersonService.addFamilyPerson(personData).subscribe({
+        next: (createdPerson) => {
+          console.log('Kişi eklendi:', createdPerson);
+          // Yeni oluşturulan kaydın Id'sini saklıyoruz
+          this.createdPersonId = createdPerson.id;
+          alert('Kişi başarıyla eklendi. Eğer fotoğraf eklemek isterseniz aşağıdan yükleyebilirsiniz.');
+        },
+        error: (err) => {
+          console.error('Kişi ekleme hatası:', err);
+          alert('Kişi eklerken hata oluştu!');
+        }
+      });
+    } else {
+      alert('Lütfen tüm gerekli alanları doldurun.');
+    }
+  }
+
+ 
+  getFamilyPersons(){
+    this.familyPersonService.getFamilyPersons().subscribe(response=>{
+      this.familyPersons=response.data
+    })
+  }
+  getRoles(){
+    this.roleService.getRoles().subscribe(response=>{
+      this.roles=response.data
+    })
+  }
+}
+------------------------
+ayrıca tüm familyPerson işlemlerini yapmamızı sağlayacak familyPerson servisini(Fotoğraf ekleme dahil) oluşturuyoruz
+------------------------
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { ListResponseModel } from '../models/listResponseModel';
+import { FamilyPerson } from '../models/familyPerson';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class FamilyPersonService {
+  id: number;
+  fullName: string;
+  email: string;
+  password: string;
+  profilePicture: string;
+  roleId: number;
+  apiUrl = 'https://localhost:7039/api/';
+
+
+  constructor(private httpClient:HttpClient) { }
+
+  getFamilyPersons():Observable<ListResponseModel<FamilyPerson>>{
+    let newPath=this.apiUrl+"familypersons/getall"
+    return this.httpClient.get<ListResponseModel<FamilyPerson>>(newPath)
+  }
+
+  addFamilyPerson(person: FamilyPerson): Observable<FamilyPerson> {
+    // Ör: POST /api/familypersons/addfamilyperson
+    return this.httpClient.post<FamilyPerson>(`${this.apiUrl}familyPersons/addfamilyperson`, person);
+  }
+
+  uploadProfilePicture(familyPersonId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+    // Ör: POST /api/familypersons/upload-profile-picture/{familyPersonId}
+    return this.httpClient.post(`${this.apiUrl}familypersons/upload-profile-picture/${familyPersonId}`, formData);
+  }
+}
+---------------------------
+öncelikle familyPerson.Html dosyasını düzenliyoruz. Bu sayfada amaç kişi listesini göstermek ve altta yeni kişi eklenmesini sağlayan form olacak ayrıca buraya ek bir buton koyarak var olan kişiye fotoğraf ekleme sayfasına gidilmesi sağlanacak.
+-------------------------
+<table class="table">
+  <thead>
+    <tr>
+      <th>Family Id</th>
+      <th>Adı Soyadı</th>
+      <th>Email</th>
+      <th>Profil Resmi</th>
+    </tr>
+  </thead>
+
+  <tr *ngFor="let familyPerson of familyPersons">
+    <td>{{ familyPerson.id }}</td>
+    <td>{{ familyPerson.fullName }}</td>
+    <td>{{ familyPerson.email }}</td>
+    <td>
+      <img
+        src="{{ familyPerson.profilePicture }}"
+        class="img-thumbnail"
+        alt="..."
+      />
+    </td>
+  </tr>
+</table>
+<div class="container">
+  <h2>FamilyPerson Oluşturma</h2>
+  <form [formGroup]="personForm" (ngSubmit)="onPersonFormSubmit()">
+    <div>
+      <label for="fullName">Full Name:</label>
+      <input
+        id="fullName"
+        class="form-control"
+        formControlName="fullName"
+        type="text"
+        placeholder="Ad Soyad"
+      />
+      <div *ngIf="personForm.get('fullName')?.invalid && personForm.get('fullName')?.touched">
+        <small style="color: red;">Zorunlu alan.</small>
+      </div>
+    </div>
+    <div>
+      <label for="email">Email:</label>
+      <input
+        id="email"
+        class="form-control"
+        formControlName="email"
+        type="email"
+        placeholder="Email"
+      />
+      <div *ngIf="personForm.get('email')?.invalid && personForm.get('email')?.touched">
+        <small style="color: red;">Geçerli bir email giriniz.</small>
+      </div>
+    </div>
+    <div>      
+      <input
+        id="password"
+        class="form-control"
+        formControlName="password"
+        type="password"
+        placeholder="Şifre"
+      />
+      <div *ngIf="personForm.get('password')?.invalid && personForm.get('password')?.touched">
+        <small style="color: red;">Zorunlu alan.</small>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label for="roleId"><h6>Rol</h6></label>
+      <select
+        class="form-select"
+        aria-label="Default select example"
+        id="roleId"
+        formControlName="roleId"             
+      >
+      <option selected>
+       Rol seçiniz
+      </option>
+        <option *ngFor="let role of roles" [ngValue]="">
+          {{ role.name }}
+        </option>
+      </select>
+    </div>
+<div>
+  <button class="btn btn-success" type="submit" [disabled]="personForm.invalid">Kişiyi Ekle (Fotoğrafsız)</button>
+</div>  
+
+  </form>
+
+  <hr />
+  <div>
+    <button class="btn btn-success" type="submit" routerLink="/familypersons/upload-profile-picture/familyPersonId" >Var olan kişiye profil fotoğrafı ata</button>
+  </div>
+  
+ 
+</div>
+----------------------------
+Burada var olan bir kişiye fotoğraf eklemek için upload-profile-picture adında yeni bir component oluşturuyoruz.
+---------------------------
+import { Component, OnInit } from '@angular/core';
+import { FamilyPersonService } from '../../services/family-person.service';
+import { ToastrService } from 'ngx-toastr';
+import { FamilyPerson } from '../../models/familyPerson';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+
+@Component({
+  selector: 'app-upload-profile-picture',
+  templateUrl: './upload-profile-picture.component.html',
+  standalone: false,
+})
+export class UploadProfilePictureComponent implements OnInit {
+  familyPersonId: number | null = null; // Kullanıcı ID'si
+  selectedFile: File | null = null; // Seçilen fotoğraf
+  familyPersons:FamilyPerson[]
+  photoForm!: FormGroup;
+
+  constructor(
+    private familyPersonService: FamilyPersonService,
+    private toastrService: ToastrService,
+    private fb:FormBuilder
+  ) {}
+  ngOnInit(): void {
+    this.getFamilyPersons()
+    this.initializeForm()
+  }
+
+  initializeForm(): void {
+    this.photoForm = this.fb.group({
+      // Kişi seçimi
+      selectedPersonId: [null, Validators.required],
+      // Fotoğraf input - reaktif form kontrol olmadan da handle edebilirsiniz; 
+      // ama input type="file" reaktif formla da çalışabilir.
+    });
+  }
+
+  /**
+   * Dosya seçildiğinde tetiklenir
+   */
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.selectedFile = file;
+    }
+  }
+
+  getFamilyPersons() {
+    this.familyPersonService.getFamilyPersons().subscribe((response) => {
+      this.familyPersons=response.data
+    });
+  }
+
+  /**
+   * Form submit
+   */
+  onSubmit(): void {
+    if (this.photoForm.invalid) {
+      alert('Lütfen bir kişi seçiniz ve fotoğraf ekleyiniz.');
+      return;
+    }
+    if (!this.selectedFile) {
+      alert('Fotoğraf seçilmedi.');
+      return;
+    }
+    const familyPersonId = this.photoForm.value.selectedPersonId;
+    this.familyPersonService.uploadProfilePicture(familyPersonId, this.selectedFile).subscribe({
+      next: (res) => {
+        console.log('Fotoğraf yüklendi:', res);
+        this.toastrService.success("Kişiye profil resmi eklendi")
+      },
+      error: (err) => {
+        console.error('Fotoğraf yükleme hatası:', err);
+        this.toastrService.success("Kişiye profil resmi eklendi")
+      }
+    });
+  }
+}
+-------------------------
+html dosyası da şu şekilde olacak
+--------------------------
+<div class="container">
+    <h2>Kişiye Fotoğraf Ekle</h2>  
+    <form [formGroup]="photoForm" (ngSubmit)="onSubmit()">
+      <!-- Kişi seçimi (select) -->
+      <div>
+        <label class="form-control" for="personSelect">FamilyPerson Seç:</label>
+        <select class="form-select" id="personSelect" formControlName="selectedPersonId">
+          <option [ngValue]="null" disabled>-- Seçiniz --</option>
+          <option *ngFor="let fp of familyPersons" [value]="fp.id">
+            {{ fp.fullName }} (ID: {{fp.id}})
+          </option>
+        </select>  
+        <!-- Hata gösterimi -->
+        <div *ngIf="photoForm.get('selectedPersonId')?.invalid && photoForm.get('selectedPersonId')?.touched">
+          <small style="color: red;">Lütfen bir kişi seçiniz.</small>
+        </div>
+      </div>  
+      <!-- Fotoğraf seçme alanı -->
+      <div>
+        <label class="form-control" for="photoFile">Profil Fotoğrafı:</label>
+        <input class="form-control" id="photoFile" type="file" (change)="onFileSelected($event)" />
+      </div>  
+      <!-- Formu gönder -->
+      <button class="btn btn-success" type="submit" [disabled]="photoForm.invalid">Fotoğraf Yükle</button>
+    </form>
+  </div>
+  ---------------------------
+  (Burada kaldık)
+  
+
+
+
 
 
 
