@@ -4243,6 +4243,141 @@ export class AppRoutingModule {}
 -------------------------------
    (Burada kaldık)
 
+   REGİSTER-LOGİN-YETKİLENDİRME İŞLEMLERİ
+   -------------------------------------------
+componentin içine girerek ng g component login ile login adında bir component oluşturuyoruz. Bundan sonra bootstrap sayafsında examples kısmında sign-in kısmını açıyoruz.https://getbootstrap.com/docs/5.3/examples/sign-in/ bu sayfadaki kodları almak için sayfaya sağ tıklıyoruz. sayfa kaynağını görüntüle ye basıyoruz. oradan kodu şu şekilde alıyoruz.
+-----------------------------
+<body>
+<main class="form-signin w-100 m-auto">
+  <form>
+    <img class="mb-4" src="/docs/5.3/assets/brand/bootstrap-logo.svg" alt="" width="72" height="57">
+    <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
+    <div class="form-floating">
+      <input type="email" class="form-control" id="floatingInput" placeholder="name@example.com">
+      <label for="floatingInput">Email address</label>
+    </div>
+    <div class="form-floating">
+      <input type="password" class="form-control" id="floatingPassword" placeholder="Password">
+      <label for="floatingPassword">Password</label>
+    </div>
+    <div class="form-check text-start my-3">
+      <input class="form-check-input" type="checkbox" value="remember-me" id="flexCheckDefault">
+      <label class="form-check-label" for="flexCheckDefault">
+        Remember me
+      </label>
+    </div>
+    <button class="btn btn-primary w-100 py-2" type="submit">Sign in</button>
+    <p class="mt-5 mb-3 text-body-secondary">&copy; 2017–2024</p>
+  </form>
+</main>
+<script src="/docs/5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</body>
+----------------------------
+Ancak görüntümüz bizim aldığımız sayfadaki gibi görünmüyor bu sebeple sayfamızın sayfa kaynağına geri dönüyoruz ve orada kullanılan sign-inn.css 'inin üstüne tıklayarak css 'i görüntülüyoruz ve css'i kopyalayıp projemizdeki login.css dosyamıza kopyalıyoruz. logonun adresini de kopyalayınca görüntümüz düzeliyor. https://getbootstrap.com/docs/5.3/assets/brand/bootstrap-logo.svg
+-----------------------------
+şimdi bu sayfayı kullanacak componentimizde işlem yapmaya geldi html sayfasındaki formu mapleyecek loginForm adında bir yapımız olacak.
+ama önce auth service'imizi oluşturalım. services klasörü içine girerek ng g service auth komutuyla auth servisimizi oluşturuyoruz. ama bize login olma sırasında hangi bilgiler geiyor ona bakmalıyız burada bize token bilgisi ve expiration bilgisi geliyor. Buna angularda tokenModel.ts adında bir model oluşturuyoruz. models üzerinde sağ tıklıyoruz ve yeni dosya oluştura basarak tokenModel.ts ve loginModel.ts dosyalarını oluşturuyoruz. 
+-----------------------
+export interface TokenModel{
+    token:string
+    expiration:string
+}
+--------------------------
+export interface LoginModel{
+    email:string
+    password:string
+}
+-------------------------
+Bizde API'den gelen bilgiler Data bilgisi, isSuccess bilgisi ve mesaj bilgisi ama bize birde Token bilgisi gelmesi gerekiyor bu sebeple bazı değişiklikler yapmamız gerekiyor yani kodlarımızı refaktör ediyoruz. öncelikle models klasöründe singleResponseModel.ts adında yeni bir dosya oluşturuyoruz. Burada içinde token bilgisi ve expiration olan tek bir data dönüyor bir data array bilgisi dönmediğinden listResponseModel.ts bizim isteğimizi karşılamıyor. ama token ve expiration bilgisinin yanında isSuccess ve Message bilgisininde dönmesini istediğimizden responseModel.ts dosyası ile extends ediyoruz.
+----------------------------
+import { ResponseModel } from "./responseModel";
+
+export interface SingleResponseModel<T> extends ResponseModel{
+    data:T
+}
+-------------------------
+auth.service şu şekilde oluşturuyoruz.
+-------------------------
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { LoginModel } from '../models/loginModel';
+import { TokenModel } from '../models/tokenModel';
+import { SingleResponseModel } from '../models/singleResponseModel';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthService {
+  apiUrl = 'https://localhost:7206/api/auth/';
+  constructor(private httpClient:HttpClient) { }
+
+  login(loginModel:LoginModel){
+    return this.httpClient.post<SingleResponseModel<TokenModel>>(this.apiUrl+"login",loginModel)
+  }
+
+  isAuthenticated(){
+    if(localStorage.getItem("token")){
+      return true
+    }else{
+      return false
+    }
+  }
+}
+--------------------------
+login.component.ts dosyası şu şekilde oluyor.
+-------------------------
+import { Component, OnInit } from '@angular/core';
+import {
+  FormBuilder,
+  FormGroup,
+  FormControl,
+  Validators,
+} from '@angular/forms';
+import { AuthService } from '../../services/auth.service';
+import { ToastrService } from 'ngx-toastr';
+
+@Component({
+  selector: 'app-login',
+  standalone: false,
+
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.css',
+})
+export class LoginComponent implements OnInit {
+  loginForm: FormGroup;
+
+  constructor(
+    private formBuilder: FormBuilder,
+    private authService: AuthService,
+    private toastrService: ToastrService
+  ) {}
+
+  ngOnInit(): void {
+    this.createLoginForm();
+  }
+
+  createLoginForm() {
+    this.loginForm = this.formBuilder.group({
+      email: ['', [Validators.required]],
+      password: ['', Validators.required],
+    });
+  }
+
+  login() {
+    if (this.loginForm.valid) {
+      let loginModel = Object.assign({}, this.loginForm.value);
+      this.authService.login(loginModel).subscribe((response) => {
+        this.toastrService.success(response.message)    
+        localStorage.setItem("token",response.data.token)    
+      });
+    }
+  }
+}
+------------------------
+
+
+   
+
 
 
 
