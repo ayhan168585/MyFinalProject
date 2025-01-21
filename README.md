@@ -4391,7 +4391,220 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(newRequest);
 };
 ------------------------
-Burada gelen requeste token bilgisinide ekleyerek cevap veriyoruz.
+Burada gelen requeste token bilgisinide ekleyerek cevap veriyoruz. Bunun devreye girebilmesi için app.module.ts dosyasına şu eklemeyi yapıyoruz daha önceden useClass kullanılıyordu ancak yeni angularda useValue kullanmak gerekiyor(provider[] kısmına)
+-------------------------
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+
+
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { ProductComponent } from './components/product/product.component';
+import { CategoryComponent } from './components/category/category.component';
+import { NaviComponent } from './components/navi/navi.component';
+import { HTTP_INTERCEPTORS, provideHttpClient } from '@angular/common/http';
+import { VatAddedPipe } from './pipes/vat-added.pipe';
+import { FormsModule,ReactiveFormsModule } from '@angular/forms';
+import { FilterPipePipe } from './pipes/filter-pipe.pipe';
+import { ToastrModule } from 'ngx-toastr';
+import { CartSummaryComponent } from './components/cart-summary/cart-summary.component';
+import { ProductAddComponent } from './components/product-add/product-add.component';
+import { LoginComponent } from './components/login/login.component';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
+
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    ProductComponent,
+    CategoryComponent,
+    NaviComponent,
+    VatAddedPipe,
+    FilterPipePipe,
+    CartSummaryComponent,
+    ProductAddComponent,
+    LoginComponent
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    FormsModule,
+    ReactiveFormsModule,
+    ToastrModule.forRoot({
+      positionClass:"toast-bottom-right",
+
+    }),
+    BrowserAnimationsModule
+    
+  ],
+  providers: [
+    provideHttpClient(),
+    {
+      provide: HTTP_INTERCEPTORS,
+      useValue: AuthInterceptor,  // Fonksiyon tabanlı interceptor
+      multi: true
+    }
+  ],
+  bootstrap: [AppComponent],
+})
+export class AppModule { }
+----------------------------
+şimdi artık önce token yokken bir ürün eklemeye çalışalim f12 ye basarak oradan application içinde localstorage içinde sağ tıklayıp clear diyerek tokeni siliyoruz ve ürün eklemeye çalışıyoruz. ve yetkiniz yok uyarısı alıyoruz şimdi login olup öyle deneyelim.Yeni angularda interceptora girmediğinden yine yetki hatası verdi chatgpt'ye sorarak app.module ve interceptors'de bazı değişiklikler yaptım. şu şekilde değişti kodlar
+------------------------------
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+
+
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { ProductComponent } from './components/product/product.component';
+import { CategoryComponent } from './components/category/category.component';
+import { NaviComponent } from './components/navi/navi.component';
+import { HTTP_INTERCEPTORS, provideHttpClient,withInterceptors} from '@angular/common/http';
+import { VatAddedPipe } from './pipes/vat-added.pipe';
+import { FormsModule,ReactiveFormsModule } from '@angular/forms';
+import { FilterPipePipe } from './pipes/filter-pipe.pipe';
+import { ToastrModule } from 'ngx-toastr';
+import { CartSummaryComponent } from './components/cart-summary/cart-summary.component';
+import { ProductAddComponent } from './components/product-add/product-add.component';
+import { LoginComponent } from './components/login/login.component';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
+
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    ProductComponent,
+    CategoryComponent,
+    NaviComponent,
+    VatAddedPipe,
+    FilterPipePipe,
+    CartSummaryComponent,
+    ProductAddComponent,
+    LoginComponent
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    FormsModule,
+    ReactiveFormsModule,
+    ToastrModule.forRoot({
+      positionClass:"toast-bottom-right",
+
+    }),
+    BrowserAnimationsModule
+    
+  ],
+  providers: [
+    provideHttpClient(),
+    provideHttpClient(
+      withInterceptors([AuthInterceptor])
+    ),
+    {
+      provide: HTTP_INTERCEPTORS,
+      useValue: AuthInterceptor,  // Fonksiyon tabanlı interceptor
+      multi: true
+    }
+  ],
+  bootstrap: [AppComponent],
+})
+export class AppModule { }
+------------------------------
+import { HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+
+export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
+  // localStorage'dan token'ı alıyoruz
+  const token = localStorage.getItem('token');
+
+  // İsteği klonlayarak Authorization başlığını ekliyoruz
+  const authReq: HttpRequest<any> = req.clone({
+    setHeaders: {
+      Authorization: `Bearer ${token ?? ''}`
+    }
+  });
+
+  // Gerekirse debug için log atabilirsiniz
+  console.log('AuthInterceptor - Request:', authReq);
+
+  // Zincirdeki bir sonraki handle'a klonlanmış isteği gönderiyoruz
+  return next(authReq);
+};
+--------------------------------
+ add() {
+    if (this.productAddForm.valid) {
+      // Form verilerini model nesnesine kopyalıyoruz
+      let productModel = Object.assign({}, this.productAddForm.value);  
+      this.productService.add(productModel).subscribe(
+        (response) => {
+          // Backend'den dönen veriyi tekrar productModel'e atıyoruz
+          productModel = response;
+          // Başarılı işlem mesajı
+          this.toastrService.success(
+            'Bir ürün eklendi',
+            productModel.productName
+          );
+        },
+        (responseError) => {
+          // Hata nesnesi varsa ve ValidationErrors bir dizi ise
+          if (
+            responseError.error?.ValidationErrors &&
+            Array.isArray(responseError.error.ValidationErrors) &&
+            responseError.error.ValidationErrors.length > 0
+          ) {
+            for (
+              let i = 0;
+              i < responseError.error.ValidationErrors.length;
+              i++
+            ) {
+              this.toastrService.error(
+                responseError.error.ValidationErrors[i].ErrorMessage,
+                'Doğrulama Hatası'
+              );
+            }
+          } else {
+            // Beklenmeyen bir hata durumunu yönetmek için genel bir mesaj
+            this.toastrService.error(
+              'Ürün ekleme sırasında beklenmeyen bir hata oluştu.',
+              'Hata'
+            );
+          }
+        }
+      );
+    } else {
+      this.toastrService.error(
+        'Ürün ekleme formu geçersiz, lütfen alanları kontrol ediniz.',
+        'Hata'
+      );
+    }
+  }
+----------------------------
+Şimdi ise yapmak istediğimiz şey Eğer login olmamışsa sayfalara ulaşamasın ve direct login ekranına yönlendirilsin app ye bir klasör daha oluşturuyoruz ismi guards olacak
+------------------------------
+// login.guard.ts
+import { CanActivateFn } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+
+export const loginGuard: CanActivateFn = (route, state) => {
+  const router = inject(Router);
+  const token = localStorage.getItem('token');
+
+  // Eğer token varsa erişime izin ver
+  if (token) {
+    return true; 
+  }
+
+  // Token yoksa /login sayfasına yönlendir
+  return router.createUrlTree(['/login']);
+};
+--------------------------
+app.route.da bunu kullanacak sayfalar ayarlanıyor.
+--------------------------
+  {path:"products/add",component:ProductAddComponent,canActivate:[loginGuard]},
+-------------------------
+böylece token yok ise products/add sayfasını getirmeye çalıştığımızda bizi direk olarak login sayfasına gönderir.
 
    
 
