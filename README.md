@@ -4369,12 +4369,29 @@ export class LoginComponent implements OnInit {
       this.authService.login(loginModel).subscribe((response) => {
         this.toastrService.success(response.message)    
         localStorage.setItem("token",response.data.token)    
+      },responseError=>{
+        console.log(responseError)
+        this.toastrService.error(responseError.error)
       });
     }
   }
 }
 ------------------------
+Böylece login yapılırken localStorage içinde token oluşuyor. Şimdi bizim yetkilendirmelerimiz vardı veritabanına baktığımızda kullanıcımızın product.add yetkisinin olduğunu görüyoruz. angularda product add sırasında tokenide de API'ye göndermek gerekiyor bu sebeple şöyle düzenleme yapıyoruz. bunu product service teki add metodunda ürünü gönderirken headers altında tek tek gönderebiliriz ama biz her metot için tek tek göndermek yerine çalışan her metotla birlikte token bilgisini de göndereceğimiz aspect şeklinde yapacağız. Bu sebeple app clasörüne sağ tıklıyoruz ve interceptors adında yeni bir klasör açıyoruz. open in integrated terminal ile içine girin ve ng g interceptor auth ile bir interceptor oluşturuyoruz.
+----------------------------
+import { HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+
+  let token=localStorage.getItem("token")
+  let newRequest:HttpRequest<any>
+  newRequest=req.clone({
+    headers:req.headers.set("Authorization","Bearer "+token)
+  })
+  return next(newRequest);
+};
+------------------------
+Burada gelen requeste token bilgisinide ekleyerek cevap veriyoruz.
 
    
 
