@@ -37,12 +37,12 @@ namespace Business.Constants
         public static string OrderUpdated = "Sipariş güncellendi.";
         public static string AyrımYeri2 = "---------------------------------------VALIDATION";
         public static string ProductNotEmpty = "Ürün adı boş olamaz";
-        public static string? AuthorizationDenied="Bu işlemi yapmak için yetkiniz yok";
+        public static string AuthorizationDenied="Bu işlemi yapmak için yetkiniz yok";
         public static string UserRegistered="Kullanıcı kayıt edildi";
         public static string UserNotFound="Kullanıcı bulunamadı";
         public static string PasswordError="Girdiğiniz şifre geçersiz";
         public static string SuccessfulLogin="Giriş başarılı";
         public static string UserAlreadyExists="Bu kullanıcı zaten mevcut";
-        public static string AccessTokenCreated="Token oluşturuldu";
+        public static string AccessTokenCreated="Giriş Başarılı";
     }
 }
